@@ -1,0 +1,8 @@
+module Cartridges
+  module Rb
+    module Version
+      VERSION: String
+    end
+    VERSION: String
+  end
+end
