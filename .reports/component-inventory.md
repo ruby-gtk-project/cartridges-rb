@@ -26,7 +26,7 @@ lib/cartridges/rb/version.rb
 
 So **one** of the components below exists, and it exists as a placeholder. Totals:
 5 blueprint files, 5 template/standalone-root units, 5 standalone menu models,
-4 standalone status pages, 1 shortcuts dialog, 2 GSettings schemas (44 keys),
+4 standalone status pages, 1 shortcuts dialog, 2 GSettings schemas (42 keys),
 38 translated locales.
 
 ---
@@ -340,7 +340,7 @@ single-instance via `is_open`. Three pages.
 | `Adw.PreferencesGroup` | 8 | — | — | Behavior, Images, Danger Zone (`separate-rows`), import Behavior, Sources (`separate-rows`), Authentication, sgdb Behavior, the untitled Update-Covers group |
 | `Adw.SwitchRow` | 16 | — | all bound to GSettings `active` | exit-after-launch, cover-launches-game, high-quality-images, auto-import, remove-missing, lutris-import-steam, lutris-import-flatpak, heroic-import-epic/gog/amazon/sideload, flatpak-import-launchers, sgdb, sgdb-prefer, sgdb-animated, desktop (the desktop row carries a `user-desktop-symbolic` prefix image and is hidden when the source is unavailable) |
 | `Adw.ButtonRow` | 2 | `destructive-action` ×2 | `activated` → `remove_all_games`, `reset_app` | "Remove All Games"; "Reset App" (visible only when `PROFILE == "development"`) |
-| `Adw.ExpanderRow` | 9 | — | `enable-expansion` bound to the source's GSettings key | Steam, Lutris, Heroic, Bottles, itch, Legendary, RetroArch, Flatpak — each `show-enable-switch`, each with a `{source}-source-symbolic` prefix image; hidden when the source is unavailable |
+| `Adw.ExpanderRow` | 8 | — | `enable-expansion` bound to the source's GSettings key | Steam, Lutris, Heroic, Bottles, itch, Legendary, RetroArch, Flatpak — each `show-enable-switch`, each with a `{source}-source-symbolic` prefix image; hidden when the source is unavailable |
 | `Adw.ActionRow` | 11 | `property` ×10 | — | 10 "Install Location" / "System Location" / "User Location" rows (one per source location, two for Flatpak), subtitled with the resolved path (Flatpak portal prefix stripped, `$HOME` → `~`); plus "Update Covers" / "Fetch covers for games already in your library", `sensitive` bound to `sgdb_switch.active` |
 | `Gtk.Button` | 11 | `flat` ×10 | `clicked` → `choose_folder(set_dir, location)` | 10 `folder-symbolic` directory pickers; `sgdb_fetch_button` "Update" |
 | `Adw.EntryRow` | 1 | — | `changed` → persist `sgdb-key`, re-evaluate `sgdb_switch` sensitivity | "API Key"; the group description carries a link to the SteamGridDB API page |
@@ -482,7 +482,7 @@ back an "Install Location" row and its warning popover.
 
 | Upstream | → | Kind | Present |
 |---|---|---|---|
-| `data/page.kramo.Cartridges.gschema.xml.in` | `lib/cartridges/settings.rb` + an installed schema | settings — 2 schemas, 44 keys (39 app + 5 `.State`: `width`, `height`, `is-maximized`, `sort-mode`, `show-sidebar`) | missing |
+| `data/page.kramo.Cartridges.gschema.xml.in` | `lib/cartridges/settings.rb` + an installed schema | settings — 2 schemas, 42 keys (36 app + 6 `.State`: `width`, `height`, `is-maximized`, `sort-mode`, `show-sidebar`, `steam-limiter-tokens-history`) | missing |
 | `data/gtk/style.css` | `lib/cartridges/style.css` (loaded via `Gtk::CssProvider`) | stylesheet — `--accent-color`/`--accent-bg-color` purple overrides (light + dark), `.no-hover > flowboxchild:hover`, `#details_view`, `#details_view_play_button` | missing |
 | `data/gtk/style-dark.css` | folded into the above | stylesheet — legacy dark variant, duplicated by the `@media` block in `style.css` | missing |
 | `data/cartridges.gresource.xml.in` | resource loading in `lib/cartridges.rb` | resources — 5 `.ui`, metainfo, `style.css`, 2 placeholder SVGs, 8 source icons under `/icons/scalable/categories/` | missing |
