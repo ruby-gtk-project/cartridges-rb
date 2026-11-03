@@ -1,0 +1,36 @@
+/* The dark-mode overrides upstream keeps in data/gtk/style-dark.css are the
+   @media (prefers-color-scheme: dark) block below; GTK 4 honours that query,
+   so the two upstream files are one stylesheet here. */
+:root {
+  --accent-color: var(--purple-5);
+  --accent-bg-color: var(--purple-3);
+}
+
+.no-hover > flowboxchild:hover {
+  background-color: transparent;
+}
+
+#details_view {
+  background-color: white;
+}
+
+#details_view_play_button {
+  color: white;
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent-color: var(--purple-1);
+    --accent-bg-color: var(--purple-4);
+  }
+
+  #details_view {
+    background-color: black;
+  }
+
+  #details_view_play_button {
+    color: rgba(0, 0, 0, 0.8);
+    background-color: white;
+  }
+}
