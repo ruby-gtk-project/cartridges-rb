@@ -3,6 +3,12 @@
 Survey of `origin/main` (upstream Cartridges, Python + blueprint + GTK4/Libadwaita)
 against `lib/` on the `ruby` branch. No app code was written in this step.
 
+Re-surveyed 2026-11-06 against the current `ruby` branch: the backend/model/data
+layer (§1's non-widget parts, §13–§16) has grown substantially since the first
+inventory; the widget layer (§2–§12 — window, dialogs, pages, tiles, menus) is
+unchanged and still entirely unbuilt. See the updated "Current state of `lib/`"
+block below and the **exists** / **missing** markers throughout.
+
 Method: the `component-identification` skill. Upstream has five blueprint files,
 so those were read first — they *are* the component inventory for everything built
 at startup — then the Python that backs them was read for runtime-built widgets,
@@ -16,15 +22,55 @@ Port layout: `lib/cartridges/<thing>.rb` under `module Cartridges`, matching the
 `lib/cartridges/application.rb` that already exists. One upstream source file (or
 blueprint/source pair) becomes one file.
 
-Current state of `lib/` on `ruby`:
+Current state of `lib/` on `ruby` (re-surveyed; this supersedes the original
+"one file, a stub" snapshot — a prior run landed the non-widget backend, but
+no window, dialog, page or tile has been built yet):
 
 ```
-lib/cartridges.rb                 # requires cartridges/application
-lib/cartridges/application.rb     # stub: window + header bar + "not written yet" StatusPage
+lib/cartridges.rb
+lib/cartridges/application.rb            # still the stub window from §1
+lib/cartridges/create_dialog.rb
+lib/cartridges/error_producer.rb
+lib/cartridges/friendly_error.rb
+lib/cartridges/game_cover.rb
+lib/cartridges/game_model.rb             # record half of game.py only — the tile (game.rb) is still missing
+lib/cartridges/http_client.rb            # port-only: stands in for Python's `requests`, no upstream file
+lib/cartridges/importer/bottles_source.rb
+lib/cartridges/importer/flatpak_source.rb
+lib/cartridges/importer/legendary_source.rb
+lib/cartridges/importer/location.rb
+lib/cartridges/importer/source.rb
+lib/cartridges/importer/steam_source.rb
+lib/cartridges/logging/color_log_formatter.rb
+lib/cartridges/logging/session_file_handler.rb
+lib/cartridges/logging/setup.rb
+lib/cartridges/rate_limiter.rb
+lib/cartridges/relative_date.rb
 lib/cartridges/rb/version.rb
+lib/cartridges/run_executable.rb
+lib/cartridges/save_cover.rb
+lib/cartridges/settings.rb
+lib/cartridges/shared.rb
+lib/cartridges/sqlite.rb
+lib/cartridges/steam.rb
+lib/cartridges/steamgriddb.rb
+lib/cartridges/store.rb
+lib/cartridges/store/managers/async_manager.rb
+lib/cartridges/store/managers/cover_manager.rb
+lib/cartridges/store/managers/file_manager.rb
+lib/cartridges/store/managers/manager.rb
+lib/cartridges/store/managers/sgdb_manager.rb
+lib/cartridges/store/managers/steam_api_manager.rb
+lib/cartridges/store/pipeline.rb
+lib/cartridges/style.css
 ```
 
-So **one** of the components below exists, and it exists as a placeholder. Totals:
+So the **data/model/service layer is substantially ported** (settings, the
+store and five of its managers, five of nine import sources, logging, the
+HTTP/SGDB/Steam/SQLite/rate-limiter/run-executable/save-cover helpers, the two
+error-handling classes). **Every user-facing widget is still missing**: no
+window, no dialog, no page, no tile, no menu — `application.rb` is unchanged
+from the original placeholder in §1. Totals unchanged from the original survey:
 5 blueprint files, 5 template/standalone-root units, 5 standalone menu models,
 4 standalone status pages, 1 shortcuts dialog, 2 GSettings schemas (42 keys),
 38 translated locales.
@@ -33,7 +79,7 @@ So **one** of the components below exists, and it exists as a placeholder. Total
 
 ## 1. `cartridges/main.py` — the application: actions, accelerators, About
 
-→ `lib/cartridges/application.rb` · kind: application · **exists (stub only)**
+→ `lib/cartridges/application.rb` · kind: application · **exists (stub only — no actions, no accelerators, no About dialog yet)**
 
 Not a widget class, but it owns every `app.*` action, every accelerator, the
 About dialog and the Preferences entry point, so it is its own unit.
@@ -421,8 +467,8 @@ string is translated.
 
 | Upstream | → | Kind | Present |
 |---|---|---|---|
-| `cartridges/errors/friendly_error.py` | `lib/cartridges/friendly_error.rb` | error model (title/subtitle shown to the user) | missing |
-| `cartridges/errors/error_producer.py` | `lib/cartridges/error_producer.rb` | mixin, thread-safe error collection | missing |
+| `cartridges/errors/friendly_error.py` | `lib/cartridges/friendly_error.rb` | error model (title/subtitle shown to the user) | **exists** |
+| `cartridges/errors/error_producer.py` | `lib/cartridges/error_producer.rb` | mixin, thread-safe error collection | **exists** |
 
 Only `FriendlyError`s reach the UI; everything else is logged. The importer and
 the managers are both `ErrorProducer`s and their errors are drained into §10's
@@ -439,17 +485,18 @@ back an "Install Location" row and its warning popover.
 
 | Upstream | → | Kind | Present |
 |---|---|---|---|
-| `cartridges/importer/source.py` | `lib/cartridges/importer/source.rb` | base class, `SourceIterable` | missing |
-| `cartridges/importer/location.py` | `lib/cartridges/importer/location.rb` | location resolution; owns `CACHE_/CONFIG_/DATA_INVALID_SUBTITLE` and `UnresolvableLocationError` | missing |
-| `cartridges/importer/steam_source.py` | `lib/cartridges/importer/steam_source.rb` | source — "Steam" | missing |
+| `cartridges/importer/source.py` | `lib/cartridges/importer/source.rb` | base class, `SourceIterable` | **exists** |
+| `cartridges/importer/location.py` | `lib/cartridges/importer/location.rb` | location resolution; owns `CACHE_/CONFIG_/DATA_INVALID_SUBTITLE` and `UnresolvableLocationError` | **exists** |
+| `cartridges/importer/steam_source.py` | `lib/cartridges/importer/steam_source.rb` | source — "Steam" | **exists** |
 | `cartridges/importer/lutris_source.py` | `lib/cartridges/importer/lutris_source.rb` | source — "Lutris" (2 locations) | missing |
 | `cartridges/importer/heroic_source.py` | `lib/cartridges/importer/heroic_source.rb` | source — "Heroic" (Epic/GOG/Amazon/sideload sub-sources) | missing |
-| `cartridges/importer/bottles_source.py` | `lib/cartridges/importer/bottles_source.rb` | source — "Bottles" | missing |
+| `cartridges/importer/bottles_source.py` | `lib/cartridges/importer/bottles_source.rb` | source — "Bottles" | **exists** |
 | `cartridges/importer/itch_source.py` | `lib/cartridges/importer/itch_source.rb` | source — "itch" | missing |
-| `cartridges/importer/legendary_source.py` | `lib/cartridges/importer/legendary_source.rb` | source — "Legendary" | missing |
+| `cartridges/importer/legendary_source.py` | `lib/cartridges/importer/legendary_source.rb` | source — "Legendary" | **exists** |
 | `cartridges/importer/retroarch_source.py` | `lib/cartridges/importer/retroarch_source.rb` | source — "RetroArch"; raises the friendly error "No RetroArch Core Selected" / "The following playlists have no default core:" / "Games with no core selected were not imported" | missing |
-| `cartridges/importer/flatpak_source.py` | `lib/cartridges/importer/flatpak_source.rb` | source — "Flatpak" (2 locations) | missing |
+| `cartridges/importer/flatpak_source.py` | `lib/cartridges/importer/flatpak_source.rb` | source — "Flatpak" (2 locations) | **exists** |
 | `cartridges/importer/desktop_source.py` | `lib/cartridges/importer/desktop_source.rb` | source — "Desktop Entries" (switch row, not expander) | missing |
+| `cartridges/importer/importer.py` | `lib/cartridges/importer/importer.rb` | orchestrator driving §10's progress dialog | missing |
 
 ---
 
@@ -457,23 +504,24 @@ back an "Install Location" row and its warning popover.
 
 | Upstream | → | Kind | Present |
 |---|---|---|---|
-| `cartridges/store/store.py` | `lib/cartridges/store.rb` | store | missing |
-| `cartridges/store/pipeline.py` | `lib/cartridges/store/pipeline.rb` | pipeline, emits `advanced` (drives the progress bar) | missing |
-| `cartridges/store/managers/manager.py` | `lib/cartridges/store/managers/manager.rb` | base | missing |
-| `cartridges/store/managers/async_manager.py` | `lib/cartridges/store/managers/async_manager.rb` | base, cancellable | missing |
-| `cartridges/store/managers/file_manager.py` | `lib/cartridges/store/managers/file_manager.rb` | persists game JSON | missing |
-| `cartridges/store/managers/display_manager.py` | `lib/cartridges/store/managers/display_manager.rb` | **adds/removes the `Game` tiles in the flow boxes** | missing |
-| `cartridges/store/managers/cover_manager.py` | `lib/cartridges/store/managers/cover_manager.rb` | cover compositing, honours `high-quality-images` | missing |
-| `cartridges/store/managers/steam_api_manager.py` | `lib/cartridges/store/managers/steam_api_manager.rb` | developer metadata | missing |
-| `cartridges/store/managers/sgdb_manager.py` | `lib/cartridges/store/managers/sgdb_manager.rb` | SteamGridDB covers; raises "Couldn't Authenticate SteamGridDB" / "Verify your API key in preferences" | missing |
-| `cartridges/utils/run_executable.py` | `lib/cartridges/run_executable.rb` | launches games (platform-specific) | missing |
-| `cartridges/utils/save_cover.py` | `lib/cartridges/save_cover.rb` | `save_cover`, `convert_cover` | missing |
-| `cartridges/utils/steam.py` | `lib/cartridges/steam.rb` | VDF/ACF parsing, Steam API | missing |
-| `cartridges/utils/steamgriddb.py` | `lib/cartridges/steamgriddb.rb` | SGDB client | missing |
-| `cartridges/utils/rate_limiter.py` | `lib/cartridges/rate_limiter.rb` | Steam API rate limiting, persisted to `steam-limiter-tokens-history` | missing |
-| `cartridges/utils/sqlite.py` | `lib/cartridges/sqlite.rb` | SQLite reads (Lutris) | missing |
-| `cartridges/shared.py.in` | `lib/cartridges/shared.rb` | `AppState`, `APP_ID`, `PREFIX`, the two `Gio::Settings`, every XDG/host/flatpak path, `games_dir`, `covers_dir` | missing |
-| `cartridges/logging/setup.py`, `color_log_formatter.py`, `session_file_handler.py` | `lib/cartridges/logging/*.rb` | logging; the session log files are what the About dialog's debug info is made of | missing |
+| `cartridges/store/store.py` | `lib/cartridges/store.rb` | store | **exists** |
+| `cartridges/store/pipeline.py` | `lib/cartridges/store/pipeline.rb` | pipeline, emits `advanced` (drives the progress bar) | **exists** |
+| `cartridges/store/managers/manager.py` | `lib/cartridges/store/managers/manager.rb` | base | **exists** |
+| `cartridges/store/managers/async_manager.py` | `lib/cartridges/store/managers/async_manager.rb` | base, cancellable | **exists** |
+| `cartridges/store/managers/file_manager.py` | `lib/cartridges/store/managers/file_manager.rb` | persists game JSON | **exists** |
+| `cartridges/store/managers/display_manager.py` | `lib/cartridges/store/managers/display_manager.rb` | **adds/removes the `Game` tiles in the flow boxes** | **missing — blocks every other manager from showing anything, since there is no `Game` tile widget yet either (§5)** |
+| `cartridges/store/managers/cover_manager.py` | `lib/cartridges/store/managers/cover_manager.rb` | cover compositing, honours `high-quality-images` | **exists** |
+| `cartridges/store/managers/steam_api_manager.py` | `lib/cartridges/store/managers/steam_api_manager.rb` | developer metadata | **exists** |
+| `cartridges/store/managers/sgdb_manager.py` | `lib/cartridges/store/managers/sgdb_manager.rb` | SteamGridDB covers; raises "Couldn't Authenticate SteamGridDB" / "Verify your API key in preferences" | **exists** |
+| `cartridges/utils/run_executable.py` | `lib/cartridges/run_executable.rb` | launches games (platform-specific) | **exists** |
+| `cartridges/utils/save_cover.py` | `lib/cartridges/save_cover.rb` | `save_cover`, `convert_cover` | **exists** |
+| `cartridges/utils/steam.py` | `lib/cartridges/steam.rb` | VDF/ACF parsing, Steam API | **exists** |
+| `cartridges/utils/steamgriddb.py` | `lib/cartridges/steamgriddb.rb` | SGDB client | **exists** |
+| `cartridges/utils/rate_limiter.py` | `lib/cartridges/rate_limiter.rb` | Steam API rate limiting, persisted to `steam-limiter-tokens-history` | **exists** |
+| `cartridges/utils/sqlite.py` | `lib/cartridges/sqlite.rb` | SQLite reads (Lutris) | **exists** |
+| `cartridges/shared.py.in` | `lib/cartridges/shared.rb` + `lib/cartridges/settings.rb` | `AppState`, `APP_ID`, `PREFIX`, the two `Gio::Settings`, every XDG/host/flatpak path, `games_dir`, `covers_dir` | **exists** (split into `shared.rb` + `settings.rb`) |
+| `cartridges/logging/setup.py`, `color_log_formatter.py`, `session_file_handler.py` | `lib/cartridges/logging/*.rb` | logging; the session log files are what the About dialog's debug info is made of | **exists** |
+| *(no upstream file — port-only)* | `lib/cartridges/http_client.rb` | replaces Python's `requests` for the managers' HTTP calls | **exists** |
 | `search-provider/cartridges-search-provider.in` | `lib/cartridges/shell_search_provider.rb` | GNOME Shell search provider over D-Bus (`…SearchProvider.ini` + `.service`) | missing |
 
 ---
@@ -482,16 +530,16 @@ back an "Install Location" row and its warning popover.
 
 | Upstream | → | Kind | Present |
 |---|---|---|---|
-| `data/page.kramo.Cartridges.gschema.xml.in` | `lib/cartridges/settings.rb` + an installed schema | settings — 2 schemas, 42 keys (36 app + 6 `.State`: `width`, `height`, `is-maximized`, `sort-mode`, `show-sidebar`, `steam-limiter-tokens-history`) | missing |
-| `data/gtk/style.css` | `lib/cartridges/style.css` (loaded via `Gtk::CssProvider`) | stylesheet — `--accent-color`/`--accent-bg-color` purple overrides (light + dark), `.no-hover > flowboxchild:hover`, `#details_view`, `#details_view_play_button` | missing |
-| `data/gtk/style-dark.css` | folded into the above | stylesheet — legacy dark variant, duplicated by the `@media` block in `style.css` | missing |
-| `data/cartridges.gresource.xml.in` | resource loading in `lib/cartridges.rb` | resources — 5 `.ui`, metainfo, `style.css`, 2 placeholder SVGs, 8 source icons under `/icons/scalable/categories/` | missing |
-| `data/library_placeholder.svg`, `library_placeholder_small.svg` | `data/` in the port | asset — the no-cover placeholders, loaded as `Gdk::Texture`s by §6 | missing |
-| `data/icons/sources/*.svg` (8) | `data/icons/sources/` | asset — sidebar and preferences source icons | missing |
-| `data/icons/hicolor/**` (4) | `data/icons/` | asset — app icon, symbolic + devel variants; the symbolic one is `notice_empty`'s icon | missing |
-| `data/page.kramo.Cartridges.desktop.in` | `data/` | desktop entry (translated) | missing |
-| `data/page.kramo.Cartridges.metainfo.xml.in` | `data/` | metainfo — **read at runtime** by `Adw::AboutDialog.new_from_appdata` | missing |
-| `po/` (38 locales + `cartridges.pot`, `LINGUAS`, `POTFILES`) | `po/` | i18n — gettext plus `ngettext` for the import summary | missing |
+| `data/page.kramo.Cartridges.gschema.xml.in` | `lib/cartridges/settings.rb` + `data/schemas/page.kramo.Cartridges.gschema.xml` | settings — 2 schemas, 42 keys (36 app + 6 `.State`: `width`, `height`, `is-maximized`, `sort-mode`, `show-sidebar`, `steam-limiter-tokens-history`) | **exists** (schema compiled to `data/schemas/gschemas.compiled`) |
+| `data/gtk/style.css` | `lib/cartridges/style.css` (not yet loaded via `Gtk::CssProvider` — no widget code references it) | stylesheet — `--accent-color`/`--accent-bg-color` purple overrides (light + dark), `.no-hover > flowboxchild:hover`, `#details_view`, `#details_view_play_button` | **file exists, not wired up** |
+| `data/gtk/style-dark.css` | folded into the above | stylesheet — legacy dark variant, duplicated by the `@media` block in `style.css` | **file exists, not wired up** |
+| `data/cartridges.gresource.xml.in` | resource loading in `lib/cartridges.rb` | resources — 5 `.ui`, metainfo, `style.css`, 2 placeholder SVGs, 8 source icons under `/icons/scalable/categories/` | missing — no `.gresource` bundle or manifest in the port; decide §16's open question 4 before building any window |
+| `data/library_placeholder.svg`, `library_placeholder_small.svg` | `data/` in the port | asset — the no-cover placeholders, loaded as `Gdk::Texture`s by §6 | **exists** |
+| `data/icons/sources/*.svg` (8) | `data/icons/sources/` | asset — sidebar and preferences source icons | **exists** |
+| `data/icons/hicolor/**` (4) | `data/icons/` | asset — app icon, symbolic + devel variants; the symbolic one is `notice_empty`'s icon | missing (no `data/icons/hicolor/` tree in the port yet) |
+| `data/page.kramo.Cartridges.desktop.in` | `data/page.kramo.Cartridges.desktop` | desktop entry (translated) | **exists** |
+| `data/page.kramo.Cartridges.metainfo.xml.in` | `data/page.kramo.Cartridges.metainfo.xml` | metainfo — **read at runtime** by `Adw::AboutDialog.new_from_appdata` | **exists** |
+| `po/` (38 locales + `cartridges.pot`, `LINGUAS`, `POTFILES`) | `po/` | i18n — gettext plus `ngettext` for the import summary | missing — no `po/` directory in the port |
 
 ---
 
