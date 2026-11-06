@@ -96,7 +96,7 @@ module Cartridges
         end
 
         def game?(keyfile)
-          keyfile.string_list("Desktop Entry", "Categories").include?("Game")
+          keyfile.get_string_list("Desktop Entry", "Categories").include?("Game")
         rescue GLib::Error
           false
         end
@@ -110,7 +110,7 @@ module Cartridges
         end
 
         def flatpak_id(keyfile)
-          keyfile.string("Desktop Entry", "X-Flatpak")
+          keyfile.get_string("Desktop Entry", "X-Flatpak")
         rescue GLib::Error
           nil
         end
@@ -119,7 +119,7 @@ module Cartridges
           {
             "source" => source.source_id,
             "added" => Shared.import_time,
-            "name" => keyfile.string("Desktop Entry", "Name"),
+            "name" => keyfile.get_string("Desktop Entry", "Name"),
             "game_id" => format(source.game_id_format, game_id: flatpak_id),
             "executable" => source.make_executable(flatpak_id: flatpak_id),
           }
@@ -137,11 +137,11 @@ module Cartridges
 
         def icon_path(keyfile)
           icon_theme.lookup_icon(
-            keyfile.string("Desktop Entry", "Icon"),
+            keyfile.get_string("Desktop Entry", "Icon"),
             nil,
             ICON_SIZE,
             1,
-            Shared.win&.direction || :none,
+            Shared.win&.window&.direction || :none,
             0,
           ).file&.path
         rescue GLib::Error

@@ -88,13 +88,13 @@ module Cartridges
         end
 
         def string_list_or_empty(keyfile)
-          keyfile.string_list("Desktop Entry", "Categories")
+          keyfile.get_string_list("Desktop Entry", "Categories")
         rescue GLib::Error
           []
         end
 
         def string_or_nil(keyfile, key)
-          keyfile.string("Desktop Entry", key)
+          keyfile.get_string("Desktop Entry", key)
         rescue GLib::Error
           nil
         end
@@ -106,7 +106,7 @@ module Cartridges
         end
 
         def try_exec_ok?(keyfile)
-          try_exec = keyfile.string("Desktop Entry", "TryExec")
+          try_exec = keyfile.get_string("Desktop Entry", "TryExec")
           try_exec.nil? || try_exec.empty? || check_command("which #{Shellwords.escape(try_exec)}")
         rescue GLib::Error
           true
@@ -117,7 +117,7 @@ module Cartridges
         end
 
         def boolean_or_false(keyfile, key)
-          keyfile.boolean("Desktop Entry", key)
+          keyfile.get_boolean("Desktop Entry", key)
         rescue GLib::Error
           false
         end
@@ -139,7 +139,7 @@ module Cartridges
         end
 
         def icon_path(icon_theme, icon_str)
-          icon_theme.lookup_icon(icon_str, nil, 512, 1, Shared.win&.direction || :none, 0).file&.path
+          icon_theme.lookup_icon(icon_str, nil, 512, 1, Shared.win&.window&.direction || :none, 0).file&.path
         rescue GLib::Error
           nil
         end

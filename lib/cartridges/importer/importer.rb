@@ -167,7 +167,7 @@ module Cartridges
         def remove_missing_games
           return unless Shared.schema.get_boolean("remove-missing")
 
-          keys = Shared.schema.list_keys
+          keys = Shared.schema.keys
           Shared.store.each { |game| maybe_remove_missing(game, keys) }
         end
 
