@@ -32,7 +32,7 @@ module Cartridges
         compile_source_dir
         source&.lookup(schema_id, true).then do |found|
           if found
-            Gio::Settings.new(settings_schema: found)
+            Gio::Settings.new(schema: found)
           else
             Gio::Settings.new(schema_id)
           end

@@ -112,6 +112,14 @@ module Cartridges
       # shared.py: the window, the running importer, the import timestamp, the
       # store and the session's log files.
       attr_accessor :win, :importer, :import_time, :store
+      attr_writer :app_state
+
+      # The app's current AppState, read through Shared rather than the
+      # application object: unlike upstream, the Gtk::Application this port
+      # builds on is not the Cartridges::Application wrapper itself, so
+      # DisplayManager and the importer read it from here instead of
+      # `shared.win.get_application().state`.
+      def app_state = @app_state ||= AppState::DEFAULT
 
       def log_files = @log_files ||= []
     end
