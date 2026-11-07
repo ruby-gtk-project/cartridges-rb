@@ -462,6 +462,7 @@ GtkDriver.drive(Cartridges::Application.new, shots: SHOTS, timeout: 60) do |d, a
       d.check("a source switch (Steam) reads its schema key") do
         dialog.send(:sources_group).is_a?(Adwaita::PreferencesGroup)
       end
+      d.check("the Heroic switch is in the sources list") { Cartridges::PreferencesDialog::SOURCES.key?("heroic") }
     end
     dialog_instance = Cartridges::PreferencesDialog.open_instance
     dialog_instance.close
@@ -527,6 +528,9 @@ GtkDriver.drive(Cartridges::Application.new, shots: SHOTS, timeout: 60) do |d, a
       !app.app.lookup_action("import").enabled?
     end
     d.check("an import progress dialog is showing") { app.main_window.window.visible_dialog.is_a?(Adwaita::Dialog) }
+    d.check("Heroic was added as an import source (schema default is on)") do
+      Shared.importer.sources.any? { |source| source.is_a?(Cartridges::Importer::HeroicSource) }
+    end
     d.shot("15-import-progress")
   end
 

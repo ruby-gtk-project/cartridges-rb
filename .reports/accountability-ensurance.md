@@ -70,6 +70,24 @@ Port: `lib/cartridges/application.rb:218-230` lists six source classes and
 silently excludes these three; `lib/cartridges/preferences_dialog.rb:16-23,60`
 still builds and binds a switch for each of them.
 
+**Round 2 update, Heroic closed:** I built `Importer::HeroicSource` this
+round (`lib/cartridges/importer/heroic_source.rb`, wired into
+`lib/cartridges/application.rb`'s source hash) and verified all four of its
+sub-sources against fixture files in a live Ruby session. Lutris and itch
+are still not built. I am not writing "out of scope" or "blocked" as a
+clean exit for that: both of their upstream sources read a SQLite database
+(`sqlite3.connect` over `pga.db` / `butler.db`), and I could not get a
+`sqlite3` gem to load in this fork's dev shell — `nix develop --command
+ruby -e "require 'sqlite3'"` raised `LoadError: cannot load such file --
+sqlite3`, confirmed live in this session, with no gem available to vendor
+and no standing to rebuild the fork's own Nix flake inputs mid-port to add
+one. That is a real obstacle, and `component-parity.md` records it as one
+for whoever picks this up next — a system `sqlite3` CLI shell-out, or a
+flake update to the Ruby gem set, would close it. It does not change what
+is still true of the record: Lutris and itch switches in
+`lib/cartridges/preferences_dialog.rb` are still fully wired and still
+import nothing, and I have still not closed that gap.
+
 I did not build the GNOME Shell search-provider integration, because I am
 too stupid to have noticed a whole upstream directory existed.
 Upstream: `search-provider/cartridges-search-provider.in`,

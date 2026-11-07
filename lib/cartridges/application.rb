@@ -24,6 +24,7 @@ require_relative "importer/bottles_source"
 require_relative "importer/legendary_source"
 require_relative "importer/desktop_source"
 require_relative "importer/retroarch_source"
+require_relative "importer/heroic_source"
 
 module Cartridges
   # Application is the app entry point: it builds the window, loads the
@@ -222,6 +223,7 @@ module Cartridges
           "legendary" => Importer::LegendarySource,
           "desktop" => Importer::DesktopSource,
           "retroarch" => Importer::RetroarchSource,
+          "heroic" => Importer::HeroicSource,
         }.each do |key, klass|
           Shared.importer.add_source(klass.new) if Shared.schema.get_boolean(key)
         end

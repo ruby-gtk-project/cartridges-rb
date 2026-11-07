@@ -6,11 +6,36 @@
 | Port | `ruby` @ `fb67b2f` |
 | Units with full parity | most windows/dialogs that exist; **3 import sources and 1 whole feature (search provider) have no unit at all** |
 
-## Gap 1 — Lutris, Heroic and itch import sources: built in the UI, dead in practice
+## Gap 1 — Lutris and itch import sources: built in the UI, dead in practice (Heroic closed this round)
 
-**This is a behavioural gap, not just a missing file.** The preferences
-dialog and GSettings schema both represent these three sources as live,
-switchable features; the import engine silently ignores all three.
+**Update, this round:** `Importer::HeroicSource` is now ported
+(`lib/cartridges/importer/heroic_source.rb`, wired into
+`lib/cartridges/application.rb`'s `on_import_action` hash) — all four
+sub-sources (sideload, Legendary/Epic, GOG, Nile/Amazon), each gated by its
+own `heroic-import-*` key, each verified against fixture `library.json`/
+`installed.json` files in a live Ruby session (sideload entry, an installed
+Epic game, an entry filtered out for being not-installed, GOG, Amazon, and
+the hidden-app-name filter from `store/config.json`, all producing the
+right `GameModel` and `local_image_path`). It is pure JSON; nothing in it
+needed a database driver.
+
+Lutris and itch remain unported. I did not port them, and the reason is not
+a design decision: `cartridges/importer/lutris_source.py` and
+`cartridges/importer/itch_source.py` both read a SQLite database
+(`pga.db`, `butler.db`) through `sqlite3.connect`, and no `sqlite3` gem is
+resolvable in this fork's dev shell — `nix develop --command ruby -e
+"require 'sqlite3'"` raises `LoadError: cannot load such file -- sqlite3`
+in this session, confirmed live, with no local copy to vendor and no way
+for this session to add one to `flake.nix`'s Ruby derivation without
+rebuilding the fork's Nix inputs, which is out of scope for a single
+import-source port. This is a real blocker, not an excuse to stop
+looking — a future round should either get `sqlite3` into the flake's Ruby
+gem set or shell out to the system `sqlite3` CLI to dump the two tables as
+text, which would avoid the gem entirely.
+
+**This remains a behavioural gap for these two, not just a missing file.**
+The preferences dialog and GSettings schema still represent Lutris and itch
+as live, switchable features; the import engine silently ignores both.
 
 - `data/page.kramo.Cartridges.gschema.xml.in` (upstream) declares `lutris`,
   `lutris-location`, `lutris-cache-location`, `lutris-import-steam`,
@@ -23,34 +48,25 @@ switchable features; the import engine silently ignores all three.
   (`SOURCES.each { |key, label| sources_group.add(bind_switch_row(...)) }`)
   builds a real, bound `Adw::SwitchRow` for each — toggling it writes
   `true`/`false` into the schema, same as Steam's row.
-- `lib/cartridges/application.rb:218-230` (`on_import_action`) is the only
-  place sources are ever instantiated and run. Its hash is:
-  ```ruby
-  {
-    "steam" => Importer::SteamSource,
-    "flatpak" => Importer::FlatpakSource,
-    "bottles" => Importer::BottlesSource,
-    "legendary" => Importer::LegendarySource,
-    "desktop" => Importer::DesktopSource,
-    "retroarch" => Importer::RetroarchSource,
-  }.each { |key, klass| Shared.importer.add_source(klass.new) if Shared.schema.get_boolean(key) }
-  ```
-  `lutris`, `heroic` and `itch` are absent from this hash. There is no
-  `Importer::LutrisSource`, `Importer::HeroicSource` or `Importer::ItchSource`
-  class anywhere in `lib/` (confirmed in `component-identification.md`).
+- `lib/cartridges/application.rb`'s `on_import_action` is the only place
+  sources are ever instantiated and run. As of this round its hash now
+  includes `"heroic" => Importer::HeroicSource`, but `lutris` and `itch`
+  are still absent. There is no `Importer::LutrisSource` or
+  `Importer::ItchSource` class anywhere in `lib/` (see the sqlite3 gem
+  gap, above).
 
-**Effect on a user:** flipping the Lutris/Heroic/itch switch in Preferences
-→ General looks identical to flipping the Steam switch (same row, same
+**Effect on a user:** flipping the Lutris/itch switch in Preferences →
+General still looks identical to flipping the Steam switch (same row, same
 binding, same persisted `true`), but `Ctrl+I` / `app.import` never looks at
-those three keys and never scans those launchers. No error, no "not
+those two keys and never scans those launchers. No error, no "not
 supported" notice — the games are just never imported. This is exactly the
 "a switch that does nothing" shape `component-parity`'s axis table warns
-about, except it is worse than inert styling: it's an inert *action*.
+about, except it is worse than inert styling: it's an inert *action*. The
+Heroic switch, as of this round, is no longer in this state.
 
-**Verdict: gap.** Three upstream components (`LutrisSource`, `HeroicSource`,
-`ItchSource`, each with their own location-resolution and multi-sub-source
-logic — Heroic alone covers Epic/GOG/Amazon/sideload) have no port
-counterpart, and the UI that should drive them is live and misleading.
+**Verdict: gap, narrowed.** `HeroicSource` now has a full port counterpart.
+`LutrisSource` and `ItchSource` do not, and the UI that should drive them
+is still live and misleading.
 
 ## Gap 2 — Search provider: entire upstream unit missing
 
