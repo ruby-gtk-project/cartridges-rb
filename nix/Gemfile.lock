@@ -41,6 +41,7 @@ GEM
       gsk4 (= 4.3.9)
     json (3.0.2)
     matrix (0.4.3)
+    mini_portile2 (2.8.9)
     native-package-installer (1.1.9)
     pango (4.3.9)
       cairo-gobject (= 4.3.9)
@@ -50,14 +51,16 @@ GEM
     red-colors (0.5.0)
       json
       matrix
+    sqlite3 (2.10.2-x86_64-linux-gnu)
 
 PLATFORMS
-  ruby
   x86_64-linux
 
 DEPENDENCIES
   adwaita
   gtk4
+  mini_portile2
+  sqlite3
 
 BUNDLED WITH
-   2.6.9
+   2.7.2
