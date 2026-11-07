@@ -118,3 +118,46 @@ RSpec suite contributes zero examples, full stop. By the task's own
 framing — "a component no check exercises is unverified, not done" —
 `LutrisSource` and `ItchSource` are implemented but not done in this
 precise sense, and the gate's 141/0 should not be read as covering them.
+
+## Addendum — real Lutris/itch fixtures, and a real port bug they found
+
+The gap above is closed in the repository now, not just in an ad hoc
+session check. `test/drive_cartridges.rb` creates a real `pga.db`
+(Lutris) and `butler.db` (itch) under the scratch `XDG_DATA_HOME`/
+`XDG_CONFIG_HOME` the drive already uses, before `app.import` runs. Both
+sources resolve their location against those fixtures instead of hitting
+"bad location", and the import step now asserts the actual imported
+`GameModel`s: name, `source` (`lutris_wine`, `itch`) and `game_id`
+(`lutris_wine_1`, `itch_1`) round-trip exactly as `LutrisSourceIterable`/
+`ItchSourceIterable`'s own field mapping says they should. 6 new checks
+(2 "source was added", 4 on the imported games), 147 of 147 passing.
+
+Making the fixtures real — so a game pipeline actually runs end to end for
+the first time in this driver's history — surfaced a genuine, previously
+latent port bug, not a test artifact: `Cartridges::Store::AsyncManager#process_game`
+(`lib/cartridges/store/managers/async_manager.rb`) ran its completion
+callback directly from the `Thread.new` worker thread. `Pipeline#manager_callback`
+calls `advance`, which may run the next *blocking* manager
+(`DisplayManager`, which touches live GTK widgets: flow boxes, tiles,
+the details page) synchronously on whatever thread called it — so with a
+real import, `DisplayManager` could run off the GTK main thread. Upstream's
+Python never has this problem: `Gio.Task.run_in_thread`'s completion
+callback is delivered back on the thread that created the task (the main
+thread) by GTask's own contract; the Ruby port's bare `Thread.new` dropped
+that guarantee. It reproduced as exactly the kind of flake a thread race
+produces: `nix develop --command xvfb-run -a ruby test/drive_cartridges.rb`
+passed clean on the first run after the fixtures were added, then failed
+two of the next two with the import dialog never closing and the drive's
+own 60s watchdog firing — not a fixture problem, since the three failing
+checks were always the same three (dialog closed / import action
+re-enabled / no toplevels left), never the new import-content checks.
+
+Fixed by wrapping the callback in `GLib::Idle.add { callback.call(self); false }`,
+which is the direct Ruby equivalent of GTask's main-thread delivery.
+Re-ran `nix develop --command xvfb-run -a ruby test/drive_cartridges.rb`
+five times in a row after the fix: 147/147, `DRIVE OK`, every time — no
+flakes, where two of three flaked before. This was a real concurrency bug
+in shipped code (any import that actually imports something could hit it,
+not just this test), not a binding gap and not a test-only issue, and the
+fix changes production code (`lib/cartridges/store/managers/async_manager.rb`),
+not the test.

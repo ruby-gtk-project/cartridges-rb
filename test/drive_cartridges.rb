@@ -33,6 +33,33 @@ FileUtils.mkdir_p(ENV.fetch("XDG_CONFIG_HOME"))
 FileUtils.mkdir_p(ENV.fetch("XDG_DATA_HOME"))
 FileUtils.mkdir_p(ENV.fetch("XDG_CACHE_HOME"))
 
+# Real fixture databases for the Lutris and itch sources, so the import step
+# below exercises their actual query/build logic instead of only hitting
+# "bad location" and skipping. Both sources resolve their location straight
+# off XDG_DATA_HOME/XDG_CONFIG_HOME (see lib/cartridges/importer/lutris_source.rb
+# and lib/cartridges/importer/itch_source.rb), so dropping a db at the path
+# each one's Location expects is enough to make it a real, asserted check
+# rather than a "the source is merely listed" one.
+require "sqlite3"
+
+LUTRIS_DB = File.join(ENV.fetch("XDG_DATA_HOME"), "lutris", "pga.db")
+FileUtils.mkdir_p(File.dirname(LUTRIS_DB))
+SQLite3::Database.new(LUTRIS_DB) do |db|
+  db.execute("CREATE TABLE games (id INTEGER, name TEXT, slug TEXT, runner TEXT, installed INTEGER, configPath TEXT)")
+  db.execute("CREATE TABLE categories (id INTEGER, name TEXT)")
+  db.execute("CREATE TABLE games_categories (game_id INTEGER, category_id INTEGER)")
+  db.execute("INSERT INTO games (id, name, slug, runner, installed, configPath) VALUES (1, 'Drive Lutris Game', 'drive-lutris-game', 'wine', 1, '/tmp/drive-lutris-config')")
+end
+
+ITCH_DB = File.join(ENV.fetch("XDG_CONFIG_HOME"), "itch", "db", "butler.db")
+FileUtils.mkdir_p(File.dirname(ITCH_DB))
+SQLite3::Database.new(ITCH_DB) do |db|
+  db.execute("CREATE TABLE games (id INTEGER, title TEXT, cover_url TEXT, still_cover_url TEXT)")
+  db.execute("CREATE TABLE caves (id INTEGER, game_id INTEGER)")
+  db.execute("INSERT INTO games (id, title, cover_url, still_cover_url) VALUES (1, 'Drive Itch Game', NULL, NULL)")
+  db.execute("INSERT INTO caves (id, game_id) VALUES (1, 1)")
+end
+
 $LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
 
 require "cartridges"
@@ -531,15 +558,41 @@ GtkDriver.drive(Cartridges::Application.new, shots: SHOTS, timeout: 60) do |d, a
     d.check("Heroic was added as an import source (schema default is on)") do
       Shared.importer.sources.any? { |source| source.is_a?(Cartridges::Importer::HeroicSource) }
     end
+    d.check("Lutris was added as an import source") do
+      Shared.importer.sources.any? { |source| source.is_a?(Cartridges::Importer::LutrisSource) }
+    end
+    d.check("itch was added as an import source") do
+      Shared.importer.sources.any? { |source| source.is_a?(Cartridges::Importer::ItchSource) }
+    end
     d.shot("15-import-progress")
   end
 
-  d.step("the import finishes (no installed launchers in this sandbox means it finishes fast)") do
-    pump(4000)
+  d.step("the import finishes: real fixture databases make Lutris and itch actually import a game each") do
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 30
+    pump(200) until Shared.importer.finished? || Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+    # The dialog's own close-attempt handling settles a tick or two after
+    # the importer considers itself finished (the same Adwaita "closed too
+    # soon after opening" quirk application.rb's watchdog comment names), so
+    # give it some further turns of the loop before asserting on it.
+    pump(2000)
     d.check("the import dialog closed") { !app.main_window.window.visible_dialog.is_a?(Adwaita::Dialog) || app.main_window.window.visible_dialog.nil? }
     d.check("the import action is enabled again") { app.app.lookup_action("import").enabled? }
-    d.check("nothing new came in (no launchers are installed under Xvfb)") do
-      Shared.importer.n_games_added.zero?
+    d.check("two games came in: one from the Lutris fixture, one from the itch fixture") do
+      Shared.importer.n_games_added == 2
+    end
+    d.check("the Lutris fixture game landed in the store with the right name and source") do
+      game = Shared.store.find { |g| g.name == "Drive Lutris Game" }
+      !game.nil? && game.source == "lutris_wine"
+    end
+    d.check("the Lutris game's id round-trips lutris's own game_id format") do
+      Shared.store.find { |g| g.name == "Drive Lutris Game" }.game_id == "lutris_wine_1"
+    end
+    d.check("the itch fixture game landed in the store with the right name and source") do
+      game = Shared.store.find { |g| g.name == "Drive Itch Game" }
+      !game.nil? && game.source == "itch"
+    end
+    d.check("the itch game's id round-trips itch's own game_id format") do
+      Shared.store.find { |g| g.name == "Drive Itch Game" }.game_id == "itch_1"
     end
     d.shot("16-after-import")
   end
