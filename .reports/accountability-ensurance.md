@@ -47,15 +47,26 @@ one to write a sentence to launder it.
 ## What a false green would have looked like here, and why there isn't quite one
 
 The task's sharpest question is whether a green claim rests on something
-never executed. The 139/139 driver run is real and was re-run live in this
+never executed. The 141/141 driver run is real and was re-run live in this
 session (`test-parity.md`); it is not a false green for what it covers. But
-the runtime gate's "44 components" framing, taken on its own, would read as
-"the app's component surface is exercised" — and three import sources and a
-whole feature exist in no form the driver could ever reach, so they are
-absent from the count of 44 the way a game absent from a library is absent
-from its filter count: not failing, just never in the list. That absence is
-reported explicitly in `test-parity.md` and `component-parity.md`; it would
-not have been, had this audit stopped at "139/139, DRIVE OK."
+the runtime gate's "20 components" framing, taken on its own, would read as
+"the app's component surface is exercised" — and `gtk_driver.rb` never
+prints or computes a component count at all; that number is the task
+harness's own summary, not something the script backs. More to the point,
+now that Lutris, Heroic and itch all *load* in the driver, a reader could
+assume the gate's clean 141/0 means those three import sources are
+verified. They are not: the driver instantiates all three and gets "bad
+location" for all three, asserting nothing about what any of them actually
+imports (see `test-parity.md`, and the "unverified by any committed check"
+finding in `component-parity.md`'s Gap 1). A green runtime gate sitting
+next to three import sources with zero committed coverage is close enough
+to the false-green shape that it has to be named plainly rather than let
+the clean number speak for itself. The search-provider feature and the
+dead `style.css` are also absent from the count of things any check could
+ever reach, the way a game absent from a library is absent from its filter
+count: not failing, just never in the list. All of this is reported
+explicitly in `test-parity.md` and `component-parity.md`; it would not
+have been, had this audit stopped at "141/141, DRIVE OK."
 
 ## The debt, written the way this skill requires
 
@@ -112,6 +123,48 @@ Upstream: n/a (upstream has no test suite to compare against — see
 Port: `spec/spec_helper.rb:23` requires `kettle/test/rspec`, which is not
 installed; running `rspec spec` produces `0 examples, 0 failures, 2 errors
 occurred outside of examples` in this session's own dev shell.
+
+**Round 3 update, re-audited at `6e281e9`.** Two more rounds of work landed
+since the paragraphs above were written: `Importer::HeroicSource` (already
+noted above), then `Importer::LutrisSource` and `Importer::ItchSource`
+(`Port Lutris and itch importer sources`), then a fix to the spec loader
+(`Fix spec suite loading: add lib/cartridges/rb.rb, tolerate missing
+kettle-test`). Re-auditing them straight rather than taking the commit
+messages' word for it:
+
+- The sqlite3 blocker is gone. `nix develop --command ruby -e "require
+  'sqlite3'"` now succeeds. `lutris_source.rb` and `itch_source.rb` exist,
+  are wired into `application.rb`'s source hash, and read correctly against
+  their upstream `.py` files line by line. **This gap is closed, honestly.**
+- But closing it surfaced a second one that the commit message does not
+  mention and that nothing in the repo flags: **neither new source has a
+  single committed test.** `test/drive_cartridges.rb` instantiates both
+  (and logs `Source lutris skipped, bad location` / `Source itch skipped,
+  bad location`) but never gives either one real data to import, so it
+  never asserts anything about what either one actually produces. I
+  verified both work by hand, live, in this session, with a throwaway
+  fixture database that exists nowhere in the repository and will not
+  exist the next time anyone runs anything. That verification is real, but
+  it is not durable, and it is not in `test-parity.md`'s 141-count, and it
+  was not in any commit message either — I am recording it here because an
+  ad hoc "I checked it and it worked" that never gets written down is
+  exactly the kind of thing this skill exists to force into the open.
+- The "spec suite loading" commit is honestly named — it fixed the loader,
+  not the absence of specs. I want to flag the risk in that commit
+  message anyway: "Fix spec suite loading" reads, to a skimmer, like
+  "fixed the test suite." What it fixed is that `require "kettle/test/rspec"`
+  no longer raises when the gem is absent; `rspec spec` now runs and finds
+  `0 examples`. The commit message does not claim more than that, and
+  neither should a reader of it. I am saying this explicitly so this
+  report does not repeat the mistake by only citing the commit title.
+- `lib/cartridges/style.css` (noted in `component-inventory.md` as
+  "not yet loaded" the very first round this fork was audited) is **still**
+  not loaded by anything in `lib/` or `exe/`, three rounds later. This is
+  the kind of gap accountability-ensurance exists to catch: not a new
+  omission, but an old one that nobody has had to write a fresh excuse for
+  only because nobody has mentioned it since round one. It is being
+  mentioned again here, and in `component-parity.md`, so it does not quietly
+  age out of the record.
 
 ## Rules checked against this report
 

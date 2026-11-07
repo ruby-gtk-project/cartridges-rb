@@ -2,12 +2,15 @@
 
 | | |
 |---|---|
-| Upstream | `origin/main` @ `c4454fd` (fb67b2f at port time; delta is translation-only) |
-| Port | `ruby` @ `fb67b2f` |
+| Upstream | `origin/main` @ `c4454fd` |
+| Port | `ruby` @ `6e281e9` |
 
 This supersedes nothing in `.reports/component-inventory.md` (the pre-build
 planning inventory); it re-identifies both trees as they stand now, after the
-port landed, to feed `component-parity`.
+port landed, to feed `component-parity`. It also supersedes the prior round
+of this report (written at `fb67b2f`), which found Lutris, Heroic and itch
+unported; two commits landed since (`Port Importer::HeroicSource` and `Port
+Lutris and itch importer sources`) and are re-checked below.
 
 ## Upstream file inventory (declarative + source)
 
@@ -56,9 +59,9 @@ whether that file exists:
 | `cartridges/importer/legendary_source.py` | `lib/cartridges/importer/legendary_source.rb` | yes |
 | `cartridges/importer/desktop_source.py` | `lib/cartridges/importer/desktop_source.rb` | yes |
 | `cartridges/importer/retroarch_source.py` | `lib/cartridges/importer/retroarch_source.rb` | yes |
-| **`cartridges/importer/lutris_source.py`** | **none** | **no** |
-| **`cartridges/importer/heroic_source.py`** | **none** | **no** |
-| **`cartridges/importer/itch_source.py`** | **none** | **no** |
+| `cartridges/importer/lutris_source.py` | `lib/cartridges/importer/lutris_source.rb` | yes (new this round) |
+| `cartridges/importer/heroic_source.py` | `lib/cartridges/importer/heroic_source.rb` | yes (landed previous round) |
+| `cartridges/importer/itch_source.py` | `lib/cartridges/importer/itch_source.rb` | yes (new this round) |
 | `data/gtk/shortcuts-dialog.blp` | `lib/cartridges/shortcuts_dialog.rb` | yes |
 | `po/` (38 locales, `cartridges.pot`, `LINGUAS`, `POTFILES`) | — | **no `po/` anywhere in the port** |
 | `search-provider/*` (`.in` exe, `.service.in`, `.ini`) | — | **no file, no `exe/` entry, no D-Bus service anywhere in the port** |
@@ -78,8 +81,25 @@ reading each file's header). None is an unexplained extra.
 
 ## What `component-parity` and `translation-parity` take from this
 
-- Three importer sources (Lutris, Heroic, itch) have **zero** port
-  counterpart — not a stub, not a partial port, nothing.
-- The search-provider D-Bus service has **zero** port counterpart.
-- There is no `po/` directory and (confirmed by grep, see
-  `translation-parity.md`) no gettext call anywhere in `lib/`.
+- All three importer sources (Lutris, Heroic, itch) now have a port file,
+  are required from `lib/cartridges/application.rb`, and are wired into
+  `Preferences`'s `SOURCES` hash exactly like Steam/Flatpak/Bottles. Reading
+  each file confirms it carries the same query/field logic as its upstream
+  `.py` (verified line-by-line for `itch_source.rb` against
+  `itch_source.py`; see `component-parity.md`). **Existing in `lib/` is not
+  the same claim as "exercised by a check"** — see `test-parity.md` for why
+  none of the three has a committed, repeatable test, only this round's ad
+  hoc verification.
+- The search-provider D-Bus service still has **zero** port counterpart —
+  re-confirmed this round (`git ls-tree -r --name-only origin/main | grep
+  search-provider` still lists four upstream files; `find`/`grep -rn
+  SearchProvider` over the port tree still return nothing).
+- There is still no `po/` directory and (confirmed by grep, see
+  `translation-parity.md`) no gettext call anywhere in `lib/`. Unchanged
+  from the prior round.
+- `lib/cartridges/style.css` (flagged in `component-inventory.md` as
+  present but unwired) is still never referenced by any `Gtk::CssProvider`
+  call anywhere in `lib/` or `exe/` (re-confirmed this round by grep) — a
+  shipped file with dead CSS, not a missing one, so it does not show up as
+  an absent port file but is a real behavioural gap (the purple accent
+  overrides and `#details_view` rules it defines never take effect).

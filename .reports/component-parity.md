@@ -3,72 +3,83 @@
 | | |
 |---|---|
 | Upstream | `origin/main` @ `c4454fd` |
-| Port | `ruby` @ `fb67b2f` |
-| Units with full parity | most windows/dialogs that exist; **3 import sources and 1 whole feature (search provider) have no unit at all** |
+| Port | `ruby` @ `6e281e9` |
+| Units with full parity | most windows/dialogs, and now all seven import sources; **1 whole feature (search provider) still has no unit at all, and 1 shipped file (style.css) is dead** |
 
-## Gap 1 — Lutris and itch import sources: built in the UI, dead in practice (Heroic closed this round)
+## Gap 1 — Lutris and itch import sources: closed this round, but unverified by any committed check
 
-**Update, this round:** `Importer::HeroicSource` is now ported
-(`lib/cartridges/importer/heroic_source.rb`, wired into
-`lib/cartridges/application.rb`'s `on_import_action` hash) — all four
-sub-sources (sideload, Legendary/Epic, GOG, Nile/Amazon), each gated by its
-own `heroic-import-*` key, each verified against fixture `library.json`/
-`installed.json` files in a live Ruby session (sideload entry, an installed
-Epic game, an entry filtered out for being not-installed, GOG, Amazon, and
-the hidden-app-name filter from `store/config.json`, all producing the
-right `GameModel` and `local_image_path`). It is pure JSON; nothing in it
-needed a database driver.
+**Update, this round:** the `sqlite3` gem gap the previous round of this
+report blocked on is resolved — `nix develop --command ruby -e "require
+'sqlite3'"` now succeeds (`SQLite3::VERSION` → `2.10.2`), and both
+`Importer::LutrisSource` (`lib/cartridges/importer/lutris_source.rb`) and
+`Importer::ItchSource` (`lib/cartridges/importer/itch_source.rb`) are
+ported, required from `lib/cartridges/application.rb` and wired into its
+`on_import_action` source hash alongside `heroic`, `steam`, `flatpak`,
+`bottles`, `legendary`, `desktop` and `retroarch`:
 
-Lutris and itch remain unported. I did not port them, and the reason is not
-a design decision: `cartridges/importer/lutris_source.py` and
-`cartridges/importer/itch_source.py` both read a SQLite database
-(`pga.db`, `butler.db`) through `sqlite3.connect`, and no `sqlite3` gem is
-resolvable in this fork's dev shell — `nix develop --command ruby -e
-"require 'sqlite3'"` raises `LoadError: cannot load such file -- sqlite3`
-in this session, confirmed live, with no local copy to vendor and no way
-for this session to add one to `flake.nix`'s Ruby derivation without
-rebuilding the fork's Nix inputs, which is out of scope for a single
-import-source port. This is a real blocker, not an excuse to stop
-looking — a future round should either get `sqlite3` into the flake's Ruby
-gem set or shell out to the system `sqlite3` CLI to dump the two tables as
-text, which would avoid the gem entirely.
+```ruby
+# lib/cartridges/application.rb
+"heroic" => Importer::HeroicSource,
+"lutris" => Importer::LutrisSource,
+"itch" => Importer::ItchSource,
+```
 
-**This remains a behavioural gap for these two, not just a missing file.**
-The preferences dialog and GSettings schema still represent Lutris and itch
-as live, switchable features; the import engine silently ignores both.
+Reading `itch_source.rb` against upstream's `itch_source.py` line by line,
+the port is faithful: the same `caves`/`games` join query, the same
+`still_cover_url || cover_url` fallback, the same `game_id_format`/
+`make_executable` call shape. `lutris_source.rb` against
+`lutris_source.py` is the same shape with the Steam/Flatpak-runner
+exclusion flags reproduced as bound schema keys
+(`lutris-import-steam`/`lutris-import-flatpak`).
 
-- `data/page.kramo.Cartridges.gschema.xml.in` (upstream) declares `lutris`,
-  `lutris-location`, `lutris-cache-location`, `lutris-import-steam`,
-  `lutris-import-flatpak`, `heroic`, `heroic-location`,
-  `heroic-import-{epic,gog,amazon,sideload}`, `itch`, `itch-location` — 12
-  keys, carried into the port's copy of the schema (`lib/cartridges/settings.rb`
-  loads the same XML; the keys exist).
-- `lib/cartridges/preferences_dialog.rb:16-23` lists `"lutris" => "Lutris"`,
-  `"heroic" => "Heroic"`, `"itch" => "itch"` in `SOURCES`, and line 60
-  (`SOURCES.each { |key, label| sources_group.add(bind_switch_row(...)) }`)
-  builds a real, bound `Adw::SwitchRow` for each — toggling it writes
-  `true`/`false` into the schema, same as Steam's row.
-- `lib/cartridges/application.rb`'s `on_import_action` is the only place
-  sources are ever instantiated and run. As of this round its hash now
-  includes `"heroic" => Importer::HeroicSource`, but `lutris` and `itch`
-  are still absent. There is no `Importer::LutrisSource` or
-  `Importer::ItchSource` class anywhere in `lib/` (see the sqlite3 gem
-  gap, above).
+I verified both live this round with a throwaway fixture — a synthetic
+`pga.db` under a temp `XDG_DATA_HOME/lutris/`, loaded through `require
+"cartridges"` under `xvfb-run` — and `LutrisSource.new.to_a` correctly
+produced a `GameModel` (`name=My Game source=lutris_wine
+game_id=lutris_wine_1 exe=xdg-open lutris:rungameid/1`) from a one-row
+fixture database. **That verification is not in the repository.** It is
+not a spec, not a driver check — it is a paragraph in this report. See
+`test-parity.md` for the fuller accounting: `test/drive_cartridges.rb`
+instantiates all three newest sources (its own log shows `Source lutris
+skipped, bad location` and `Source itch skipped, bad location` next to
+Heroic's identical line) but, because the sandbox has none of their real
+launcher directories, never feeds any of the three real data and asserts
+nothing about the games they would produce. Only Heroic gets even a
+presence check (`d.check("Heroic was added as an import source...")`).
 
-**Effect on a user:** flipping the Lutris/itch switch in Preferences →
-General still looks identical to flipping the Steam switch (same row, same
-binding, same persisted `true`), but `Ctrl+I` / `app.import` never looks at
-those two keys and never scans those launchers. No error, no "not
-supported" notice — the games are just never imported. This is exactly the
-"a switch that does nothing" shape `component-parity`'s axis table warns
-about, except it is worse than inert styling: it's an inert *action*. The
-Heroic switch, as of this round, is no longer in this state.
+**Effect on a user:** flipping the Lutris/Heroic/itch switches in
+Preferences → General is, as of this round, no longer misleading — all
+three now do something real when `Ctrl+I` runs. But none of the three has
+a regression check anywhere in the port's own test surface, so the next
+change to any of them (a schema rename, a column reorder) ships with
+nothing to catch it.
 
-**Verdict: gap, narrowed.** `HeroicSource` now has a full port counterpart.
-`LutrisSource` and `ItchSource` do not, and the UI that should drive them
-is still live and misleading.
+**Verdict: implemented, not verified.** The prior round's gap (dead
+switches) is closed. A new, narrower gap replaces it: per the task's own
+framing, "a component no check exercises is unverified, not done," and
+that is the honest status of all three newest sources — Lutris and itch
+with zero committed coverage of any kind, Heroic with one presence check
+that never imports anything through it.
 
-## Gap 2 — Search provider: entire upstream unit missing
+## Gap 2 — `lib/cartridges/style.css` is shipped and dead
+
+`lib/cartridges/style.css` exists in the port (carried over from upstream's
+`data/gtk/style.css`: the purple accent-color overrides for light and dark,
+`.no-hover > flowboxchild:hover`, `#details_view`,
+`#details_view_play_button`) but no file in `lib/` or `exe/` loads it —
+`grep -rn "style.css\|CssProvider" lib/ exe/` returns nothing, re-confirmed
+this round. Upstream's `main.py` registers this stylesheet with
+`Gtk.CssProvider` at startup; the port never instantiates a
+`Gtk::CssProvider` at all. The effect is invisible in a screenshot diff
+(the app still renders, just with GTK's stock Adwaita accent instead of
+upstream's purple, and without the two `#details_view` rules) and so is
+exactly the kind of gap a driver script checking structure and bindings,
+not pixel color, will never catch.
+
+**Verdict: gap.** A shipped, unwired file — carried over as dead weight,
+not ported as behaviour.
+
+## Gap 3 — Search provider: entire upstream unit missing (unchanged)
 
 Upstream ships a GNOME Shell search-provider integration as a separate
 process: `search-provider/cartridges-search-provider.in` (the executable),
@@ -91,7 +102,7 @@ tracked nowhere.
 
 ## What does have parity
 
-Spot-checked against the `test/drive_cartridges.rb` driver (139/139 checks
+Spot-checked against the `test/drive_cartridges.rb` driver (141/141 checks
 passing — see `test-parity.md` for the run) and by reading the files
 directly:
 
@@ -120,10 +131,11 @@ literal, never through a translation call. This fails the text axis for
 ## Rules check
 
 - No parity claim in this report rests on the scan or on reading code alone
-  for the parts that could be driven: the 139-check driver run backs every
+  for the parts that could be driven: the 141-check driver run backs every
   "does have parity" claim above (see `test-parity.md` for the actual
   transcript).
-- The two gaps above are named with file and line, not "probably missing
-  somewhere."
-- Neither gap is excused by any comment in the source — see
+- All three gaps above are named with file and line, not "probably missing
+  somewhere," and Gap 1 is stated as what it now is — implemented but
+  unverified by a committed check — rather than left reading as closed.
+- None of the three gaps is excused by any comment in the source — see
   `accountability-ensurance.md`.

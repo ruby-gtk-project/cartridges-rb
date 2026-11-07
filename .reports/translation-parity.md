@@ -1,8 +1,15 @@
 # Translation parity — cartridges-rb
 
+Re-run this round (port now at `ruby` @ `6e281e9`, two importer-port commits
+and a spec-loading fix since the last pass). Every finding below was
+re-verified live and is unchanged: no `po/` directory, no `.pot`, no
+gettext call, in a tree that now has three more Ruby files than it did
+last round (`heroic_source.rb` was already present; `lutris_source.rb` and
+`itch_source.rb` are new and equally untranslated).
+
 | | |
 |---|---|
-| Upstream | `main` @ `c4454fd` |
+| Upstream | `origin/main` @ `c4454fd` |
 | Upstream msgids | 148 (`po/cartridges.pot`, 149 `^msgid` lines minus the empty header entry) |
 | Upstream languages | 38 (`po/LINGUAS`: ar, be, ca, cs, de, el, en_GB, es, eu, fa, fi, fr, hi, hr, hu, ia, ie, it, ja, ka, kk, ko, kw, nb_NO, nl, nn, pl, pt, pt_BR, ro, ru, sv, ta, te, tr, uk, vi, zh_Hans) |
 | Port msgids | **0** |
