@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Upstream | `origin/main` @ `c4454fd` |
-| Port | `ruby` @ `6e281e9` |
+| Port | `ruby` @ `faebbbd` |
 | Upstream tests | 0 |
 | Ported | 0 |
 | Gaps | 0 |
@@ -161,3 +161,28 @@ in shipped code (any import that actually imports something could hit it,
 not just this test), not a binding gap and not a test-only issue, and the
 fix changes production code (`lib/cartridges/store/managers/async_manager.rb`),
 not the test.
+
+## Addendum 2 — the GNOME Shell search provider has zero committed tests
+
+`lib/cartridges/shell_search_provider.rb` and `exe/cartridges-search-provider`
+(added in `Port the GNOME Shell search provider`) are not referenced anywhere
+in `test/drive_cartridges.rb` or any other file under `test/` or `spec/` —
+confirmed by `grep -rn "SearchProvider\|search_provider\|search-provider"
+test/ spec/`, which returns nothing. The 147/147 driver run this round, and
+the gate it backs, exercises none of this file's five D-Bus methods, its
+game-filtering logic (hidden/blacklisted/removed), or its `search()` matcher.
+
+The commit message for that port says it was verified "against a live
+dbus-run-session session bus with gdbus, including special characters,
+hidden-game filtering, and the detached subprocess spawn." That verification
+is real and specific, but it is the same shape of gap this report's first
+addendum found for Lutris/itch before their fixtures landed: **an ad hoc
+session check that is not in the repository and will not run again.** The
+next change to `search()`'s substring matching, or to `load_games_from_disk`'s
+hidden/blacklisted/removed filter, ships with nothing to catch a regression.
+
+Per the task's own framing — "a component no check exercises is unverified,
+not done" — the search provider is implemented but not done in this sense,
+on top of the packaging gap `component-parity.md`'s Gap 3 records (no
+`.service`/`.ini`, so the feature cannot be reached in a real install
+regardless of whether its own logic is correct).

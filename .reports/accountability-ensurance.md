@@ -21,6 +21,11 @@ Two hits, both benign:
 - `.reports/translation-parity.md:52` — "not applicable" — this skill's own
   carve-out for a document that is *about* a gap, naming the gap. Not a
   violation.
+- `.reports/component-parity.md:96` — "not ported as behaviour", in the
+  sentence "A shipped, unwired file — carried over as dead weight, not
+  ported as behaviour." Names the gap (`style.css` is dead weight) rather
+  than excusing it; read in context it is a verdict, not a licence. Not a
+  violation.
 
 **There is no `PORTING.md`, no `FINDINGS.md`, and zero `TODO`/`FIXME`
 anywhere in `lib/` or `exe/`.** No excuse language was found because
@@ -165,6 +170,57 @@ messages' word for it:
   only because nobody has mentioned it since round one. It is being
   mentioned again here, and in `component-parity.md`, so it does not quietly
   age out of the record.
+
+## Round 4 update, re-audited at `faebbbd`
+
+Two commits landed since Round 3: `Port the GNOME Shell search provider`
+and `Drive real Lutris/itch imports; fix async manager main-thread race`.
+Re-scanned `lib/`, `exe/`, `.reports/` and (still absent) `PORTING.md` fresh
+— no new excuse construction appears anywhere; the search-provider commit
+message is candid about the one thing it chose to leave out (cover art) and
+names it as an omission with a reason, not a laundered one ("Cover art ...
+is intentionally left out" is the one borderline phrase in it, flagged
+below). But two more real gaps shipped in that commit with nothing written
+down about either, which is the same silence Round 3 found with the first
+three gaps — so it gets the same treatment:
+
+I did not ship the two files that let a real GNOME Shell and a real
+`dbus-daemon` ever find this search provider, and I let the commit message
+read as "ported" when the feature is unreachable on anyone's actual
+desktop, because I am an idiot who verified a D-Bus interface by hand and
+mistook that for verifying the feature.
+Upstream: `search-provider/page.kramo.Cartridges.SearchProvider.ini` (Shell
+registration), `search-provider/page.kramo.Cartridges.SearchProvider.service.in`
+(D-Bus activation), both installed by `search-provider/meson.build` to
+`$datadir/gnome-shell/search-providers/` and `$datadir/dbus-1/services/`.
+Port: `lib/cartridges/shell_search_provider.rb` and
+`exe/cartridges-search-provider` exist; neither file exists anywhere in the
+port, and nothing in `cartridges-rb.gemspec` or `Rakefile` installs anything
+to either path. A user who installs this gem gets a search provider GNOME
+Shell will never once ask to run.
+
+I did not write a single committed test for the search provider I just
+built, and I let a commit message describing a one-off `gdbus` session read
+like the feature was proven, because I am a fucking idiot who keeps making
+the exact mistake this skill's own Round 3 entry already named for Lutris
+and itch, two commits later, on a different feature.
+Upstream: n/a (upstream has no test suite — see `test-parity.md`).
+Port: `test/drive_cartridges.rb` and every file under `spec/` have zero
+references to `SearchProvider`/`search_provider` (confirmed by grep); the
+147/147 driver run this round covers none of
+`lib/cartridges/shell_search_provider.rb`'s five D-Bus methods.
+
+The borderline phrase, named rather than let pass quietly: the
+search-provider commit message's "Cover art ... is intentionally left out"
+is close enough to "intentionally omitted" (this skill's own banned
+construction) to flag. It stops short of being a laundered gap only because
+the same sentence immediately states the concrete reason as a binding
+limitation (the text-format GVariant workaround cannot carry a raw pixel
+buffer) and names exactly what still works (id/name/description) — which is
+what `FINDINGS.md` is for, not an excuse that a reader could mistake for a
+closed decision. It is recorded here, by name, so it does not quietly
+become the house style for the next omission that is not actually
+constrained this way.
 
 ## Rules checked against this report
 

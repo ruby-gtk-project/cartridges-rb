@@ -1,11 +1,14 @@
 # Translation parity — cartridges-rb
 
-Re-run this round (port now at `ruby` @ `6e281e9`, two importer-port commits
-and a spec-loading fix since the last pass). Every finding below was
-re-verified live and is unchanged: no `po/` directory, no `.pot`, no
-gettext call, in a tree that now has three more Ruby files than it did
-last round (`heroic_source.rb` was already present; `lutris_source.rb` and
-`itch_source.rb` are new and equally untranslated).
+Re-run this round (port now at `ruby` @ `faebbbd`: a search-provider port and
+a real-fixture/concurrency-fix commit have landed since the last pass).
+Every finding below was re-verified live and is unchanged: no `po/`
+directory, no `.pot`, no gettext call, in a tree that now has one more Ruby
+file than it did last round (`lib/cartridges/shell_search_provider.rb`).
+That file was read directly and carries no user-visible string of its own —
+every value it marshals (game id, name, developer) is data read off disk,
+not UI text — so it opens zero new translation rows and closes none either.
+The 148/148 gap count from the previous round is unchanged.
 
 | | |
 |---|---|

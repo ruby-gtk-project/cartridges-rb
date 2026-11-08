@@ -3,14 +3,15 @@
 | | |
 |---|---|
 | Upstream | `origin/main` @ `c4454fd` |
-| Port | `ruby` @ `6e281e9` |
+| Port | `ruby` @ `faebbbd` |
 
 This supersedes nothing in `.reports/component-inventory.md` (the pre-build
 planning inventory); it re-identifies both trees as they stand now, after the
 port landed, to feed `component-parity`. It also supersedes the prior round
-of this report (written at `fb67b2f`), which found Lutris, Heroic and itch
-unported; two commits landed since (`Port Importer::HeroicSource` and `Port
-Lutris and itch importer sources`) and are re-checked below.
+of this report (written at `6e281e9`), which found the search provider
+entirely unported and Lutris/itch untested; two commits landed since
+(`Port the GNOME Shell search provider`, `Drive real Lutris/itch imports;
+fix async manager main-thread race`) and are re-checked below.
 
 ## Upstream file inventory (declarative + source)
 
@@ -64,7 +65,10 @@ whether that file exists:
 | `cartridges/importer/itch_source.py` | `lib/cartridges/importer/itch_source.rb` | yes (new this round) |
 | `data/gtk/shortcuts-dialog.blp` | `lib/cartridges/shortcuts_dialog.rb` | yes |
 | `po/` (38 locales, `cartridges.pot`, `LINGUAS`, `POTFILES`) | — | **no `po/` anywhere in the port** |
-| `search-provider/*` (`.in` exe, `.service.in`, `.ini`) | — | **no file, no `exe/` entry, no D-Bus service anywhere in the port** |
+| `search-provider/cartridges-search-provider.in` | `lib/cartridges/shell_search_provider.rb` + `exe/cartridges-search-provider` | yes (new this round) |
+| `search-provider/page.kramo.Cartridges.SearchProvider.ini` | — | **missing — no `data/` file, and nothing installs one** |
+| `search-provider/page.kramo.Cartridges.SearchProvider.service.in` | — | **missing — no `data/` file, and nothing installs one** |
+| `search-provider/meson.build` (installs the two files above to `$datadir/gnome-shell/search-providers/` and `$datadir/dbus-1/services/`) | — | **no correspondence — the gemspec/Rakefile install nothing under either path** |
 
 Everything else upstream ships (`build-aux/`, `meson.build`, `data/icons/`,
 `.github/`) is packaging/build plumbing with a Ruby/`kettle-jem`
@@ -90,10 +94,21 @@ reading each file's header). None is an unexplained extra.
   the same claim as "exercised by a check"** — see `test-parity.md` for why
   none of the three has a committed, repeatable test, only this round's ad
   hoc verification.
-- The search-provider D-Bus service still has **zero** port counterpart —
-  re-confirmed this round (`git ls-tree -r --name-only origin/main | grep
-  search-provider` still lists four upstream files; `find`/`grep -rn
-  SearchProvider` over the port tree still return nothing).
+- The search-provider executable and its D-Bus interface are now built
+  (`lib/cartridges/shell_search_provider.rb`, `exe/cartridges-search-provider`)
+  and were driven live against a real session bus this round (see
+  `component-parity.md`). **But the other two upstream files in that unit —
+  `page.kramo.Cartridges.SearchProvider.ini` (the GNOME Shell registration)
+  and `.service.in` (the D-Bus activation unit) — have no port counterpart at
+  all, and nothing in the gemspec, `Rakefile` or `data/` installs anything to
+  `$datadir/gnome-shell/search-providers/` or `$datadir/dbus-1/services/`.**
+  Re-confirmed this round: `find . -iname '*.service*' -o -iname
+  '*searchprovider*.ini'` under the port returns nothing outside `.git`. GNOME
+  Shell has no mechanism to discover this provider, and D-Bus has no
+  activation record for its bus name, in any real install of this gem — the
+  executable only runs because a developer invokes it by hand or `dbus-run-session`
+  stands in for the session bus directly, as the commit's own verification did.
+  Four upstream files map to this unit; two have a port file and two do not.
 - There is still no `po/` directory and (confirmed by grep, see
   `translation-parity.md`) no gettext call anywhere in `lib/`. Unchanged
   from the prior round.
