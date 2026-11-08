@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Upstream | `origin/main` @ `c4454fd` |
-| Port | `ruby` @ `faebbbd` |
+| Port | `ruby` @ `2cb65fe` |
 
 This supersedes nothing in `.reports/component-inventory.md` (the pre-build
 planning inventory); it re-identifies both trees as they stand now, after the
@@ -118,3 +118,26 @@ reading each file's header). None is an unexplained extra.
   shipped file with dead CSS, not a missing one, so it does not show up as
   an absent port file but is a real behavioural gap (the purple accent
   overrides and `#details_view` rules it defines never take effect).
+
+## Round 5 update, re-audited at `2cb65fe`
+
+`Wire style.css, search-provider data files, and Heroic/shell-provider test
+coverage` landed. Re-identified rather than trusting the commit title:
+
+- **`style.css` is wired now.** `lib/cartridges/application.rb` carries a
+  `load_css`/`css_provider` pair calling `Gtk::CssProvider.new.tap { |p|
+  p.load_from_path(...) }` and `Gtk::StyleContext.add_provider_for_display`,
+  confirmed by reading the file. The dead-file gap above is closed.
+- **The search-provider unit's two missing upstream files now have port
+  counterparts.** `data/page.kramo.Cartridges.SearchProvider.ini` and
+  `data/page.kramo.Cartridges.SearchProvider.service.in` exist and match
+  upstream's `search-provider/*.ini`/`*.service.in` content, and
+  `cartridges-rb.gemspec` + `Rakefile`'s new `install:search_provider` task
+  install them (substituted) to the same two paths upstream's
+  `search-provider/meson.build` does. All four upstream files in this unit
+  now have a port counterpart.
+- **No new upstream file appeared, and no new upstream file went
+  unmapped.** The commit's other changes are to `lib/cartridges/application.rb`
+  (CSS loading, already-mapped unit) and `test/` (not a component).
+- `po/` and gettext calls: unchanged, still absent — see
+  `translation-parity.md`.

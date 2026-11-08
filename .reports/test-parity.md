@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Upstream | `origin/main` @ `c4454fd` |
-| Port | `ruby` @ `faebbbd` |
+| Port | `ruby` @ `2cb65fe` |
 | Upstream tests | 0 |
 | Ported | 0 |
 | Gaps | 0 |
@@ -186,3 +186,72 @@ not done" — the search provider is implemented but not done in this sense,
 on top of the packaging gap `component-parity.md`'s Gap 3 records (no
 `.service`/`.ini`, so the feature cannot be reached in a real install
 regardless of whether its own logic is correct).
+
+## Addendum 3 — Round 5, re-audited at `2cb65fe`: the search-provider test gap is closed, and Heroic now has real coverage
+
+`Wire style.css, search-provider data files, and Heroic/shell-provider test
+coverage` landed since the last addendum and does exactly what its title
+says, re-verified live rather than taken from the message:
+
+```
+$ nix develop --command xvfb-run -a ruby test/drive_shell_search_provider.rb
+...
+16 of 16 checks passed
+DRIVE OK
+```
+
+This closes Addendum 2's gap: `GetInitialResultSet`, `GetSubsearchResultSet`,
+`GetResultMetas`, `ActivateResult` and `LaunchSearch` are now all driven
+against a real session bus (`dbus-run-session` under the hood), including
+the hidden/blacklisted/removed filter, a case-insensitive match on name and
+on developer, an unknown-id lookup and an empty-developer meta. This is a
+committed, repeatable check, not the ad hoc `gdbus` session the earlier
+commit message described — the distinction Addendum 2 existed to draw.
+
+`test/drive_cartridges.rb` also grew real fixtures
+(`legendary_library.json`, `gog_library.json`, `nile_library.json`,
+`sideload_apps/library.json`) for all four Heroic sub-sources, closing the
+"Heroic gets only a presence check" half of the original gap this report
+opened with:
+
+```
+$ nix develop --command xvfb-run -a ruby test/drive_cartridges.rb
+...
+151 of 151 checks passed
+DRIVE OK
+```
+
+**Combined runtime gate, both scripts, re-run live this round: 167 of 167
+checks passed (151 + 16), matching the task's own stated gate exactly.**
+
+What is still true, unchanged by this commit:
+
+- **Upstream still has zero tests** — 0/0 parity is still met trivially, and
+  the port still inherits no safety net from upstream; this round's 167
+  checks are all extra, written for the port, same as every check before
+  them.
+- **`spec/` still contains zero `*_spec.rb` files.** Re-ran the RSpec runner
+  live this round: `0 examples, 0 failures`, unchanged from the last
+  addendum. A suite that executes and finds nothing is still a gap, not a
+  pass, and nothing in this commit touches it.
+- **The cover-art half of the search-provider gap is untested because it is
+  unbuilt** — `drive_shell_search_provider.rb`'s `GetResultMetas` checks
+  assert `id`/`name`/`description` only, correctly, because that is all
+  `result_meta` currently builds (see `component-parity.md`'s Gap 3,
+  sub-gap 2). A test that asserted `icon-data` today would fail, honestly;
+  one does not exist, which is the right state for an unbuilt feature but
+  is recorded here so the next person does not mistake 16/16 for covering
+  it.
+
+## Updated extra-coverage summary
+
+- `test/drive_cartridges.rb` — 151 checks, covering the main window,
+  dialogs, menus, shortcuts, the About dialog, all seven import sources
+  (Lutris/itch/all four Heroic sub-sources backed by real fixture
+  assertions, not just presence), persistence to disk, and window close.
+- `test/drive_shell_search_provider.rb` — 16 checks, covering all five
+  `org.gnome.Shell.SearchProvider2` D-Bus methods against a real session
+  bus.
+- **167 total, 0 failed.** This is the number the task's runtime gate names,
+  and it is backed by two scripts re-run live in this session, not asserted
+  from a commit message.

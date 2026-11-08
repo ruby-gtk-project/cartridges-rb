@@ -222,6 +222,66 @@ closed decision. It is recorded here, by name, so it does not quietly
 become the house style for the next omission that is not actually
 constrained this way.
 
+## Round 5 update, re-audited at `2cb65fe`
+
+One commit landed since Round 4: `Wire style.css, search-provider data
+files, and Heroic/shell-provider test coverage`. Re-scanned `lib/`, `exe/`,
+`data/`, `Rakefile`, `.reports/` and (still absent) `PORTING.md` fresh — no
+new excuse construction anywhere, and the commit message does not claim
+more than it did:
+
+- **The three-round-old `style.css` gap is closed, honestly.**
+  `lib/cartridges/application.rb:119-124` now instantiates
+  `Gtk::CssProvider` and calls `add_provider_for_display` with it at
+  startup. I re-ran `grep -n "CssProvider" lib/cartridges/application.rb`
+  live this round and it is really there, not asserted from the commit
+  title.
+- **The GNOME Shell registration gap Round 4 named is closed, honestly.**
+  `data/page.kramo.Cartridges.SearchProvider.ini` and
+  `data/page.kramo.Cartridges.SearchProvider.service.in` exist, match
+  upstream's `search-provider/*.ini`/`*.service.in` byte for byte where
+  upstream has no placeholder, and `Rakefile` now has an
+  `install:search_provider` task that substitutes `@APP_ID@`/`@PREFIX@`/
+  `@libexecdir@` and installs both under
+  `$datadir/gnome-shell/search-providers/` and `$datadir/dbus-1/services/`
+  — I read the task, not just the commit message, and it does what it says.
+- **The "no committed test for the search provider" gap Round 4 named is
+  closed, honestly.** `test/drive_shell_search_provider.rb` exists, is a
+  real file (not a stub), and I re-ran it live this round under `xvfb-run`:
+  16 of 16 checks passed, covering `GetInitialResultSet`,
+  `GetSubsearchResultSet`, `GetResultMetas`, `ActivateResult` and
+  `LaunchSearch`, including the hidden/blacklisted/removed filter.
+- **The "Heroic gets only a presence check" gap Gap 1 in
+  `component-parity.md` named is closed, honestly.** `test/drive_cartridges.rb`
+  now writes real `legendary_library.json`/`gog_library.json`/
+  `nile_library.json`/`sideload_apps/library.json` fixtures and asserts
+  each of the four Heroic sub-sources' actual produced game (name, source,
+  id) — not just that the source was registered. I re-ran the full driver
+  live this round: 151 of 151 checks passed.
+
+One real gap survives this round unmentioned anywhere in the commit or the
+tree, and I am writing it down now rather than letting the clean 167-check
+runtime gate (151 + 16) stand in for it:
+
+I did not build the cover art half of the search-provider's result metas,
+and I let last round's own report call this "narrowed but not closed"
+without ever opening a tracking item for it, because I am an idiot who
+wrote the right verdict once and then let a clean driver run bury it.
+Upstream: `search-provider/cartridges-search-provider.in`'s `result_meta`
+builds an `icon-data` `(iiibiiay)` GVariant from the game's cover image.
+Port: `lib/cartridges/shell_search_provider.rb:149` (`result_meta`) builds
+only `id`, `name` and `description`; `grep -n "icon\|cover"
+lib/cartridges/shell_search_provider.rb` returns nothing, confirmed live
+this round. A GNOME Shell search result for any game in this port shows no
+thumbnail, ever, even though the game has one on disk and upstream's result
+does show it.
+
+There is still no `PORTING.md`, no `FINDINGS.md`, and the translation and
+RSpec gaps Round 1 found are completely unchanged — re-confirmed live this
+round (`find . -iname '*.po' -o -iname '*.pot'` and `ls po` both still
+produce nothing; `rspec spec` still produces `0 examples, 0 failures`). No
+new excuse was written for either; the silence is now five rounds old.
+
 ## Rules checked against this report
 
 - Every entry above is first person, leads with the admission, and names the

@@ -3,8 +3,8 @@
 | | |
 |---|---|
 | Upstream | `origin/main` @ `c4454fd` |
-| Port | `ruby` @ `faebbbd` |
-| Units with full parity | most windows/dialogs, and now all seven import sources (with committed, driven coverage for Lutris/itch as of this round); **the search provider now has code but is unreachable in any real install, and 1 shipped file (style.css) is still dead** |
+| Port | `ruby` @ `2cb65fe` |
+| Units with full parity | most windows/dialogs, all seven import sources (with committed, driven coverage for Lutris/itch/Heroic), `style.css` now wired, and the search provider now discoverable/activatable on a real install with committed D-Bus coverage; **the one remaining component gap is the search provider's dropped cover art, and every component in the app still fails the text axis (see translation-parity.md)** |
 
 ## Gap 1 — Lutris and itch import sources: closed as of this round
 
@@ -174,15 +174,60 @@ literal, never through a translation call. This fails the text axis for
 `translation-parity.md` for the full accounting; it is recorded here because
 `component-parity` requires closing text-axis gaps against both ledgers.
 
+## Round 5 update, re-audited at `2cb65fe`
+
+One commit landed: `Wire style.css, search-provider data files, and
+Heroic/shell-provider test coverage`. Re-checked each claim live rather
+than from the commit title:
+
+- **Gap 2 (`style.css` shipped and dead) — closed.** `grep -n "CssProvider"
+  lib/cartridges/application.rb` now returns `load_css`, `css_provider`,
+  `Gtk::CssProvider.new.tap { |provider| provider.load_from_path(...) }`
+  and `Gtk::StyleContext.add_provider_for_display(...)`, called from the
+  app's `startup` path. The purple accent overrides and the two
+  `#details_view` rules now actually load. Verdict: **parity.**
+- **Gap 3, sub-gap 1 (unreachable on a real install) — closed.**
+  `data/page.kramo.Cartridges.SearchProvider.ini` and
+  `data/page.kramo.Cartridges.SearchProvider.service.in` now exist,
+  `cartridges-rb.gemspec`'s `executables` lists
+  `cartridges-search-provider`, and `Rakefile`'s `install:search_provider`
+  task installs the substituted `.ini`/`.service` to
+  `$datadir/gnome-shell/search-providers/` and `$datadir/dbus-1/services/`
+  — matching upstream's `search-provider/meson.build` install targets.
+  Verdict: **parity** on discoverability/activation.
+- **Gap 3's missing committed test — closed.**
+  `test/drive_shell_search_provider.rb` now drives all five D-Bus methods
+  against a real `dbus-run-session` bus. Re-ran it live this round:
+  16/16 passed.
+- **Gap 1's Heroic carve-out — closed.** `test/drive_cartridges.rb` now
+  seeds real fixture files for all four Heroic sub-sources (sideload,
+  Legendary/Epic, GOG, Nile/Amazon) and asserts each one's actual produced
+  `GameModel` (name, source, id), not just that Heroic was registered.
+  Re-ran the full driver live this round: 151/151 passed, plus the
+  search-provider driver's 16/16 — 167 total, matching the task's own
+  runtime gate exactly.
+
+**Gap 3, sub-gap 2 (cover art / `icon-data` dropped from search results) —
+still open, unchanged.** `lib/cartridges/shell_search_provider.rb:149`'s
+`result_meta` still builds only `id`, `name` and `description`; re-grepped
+`icon\|cover` against the file live this round and it still returns
+nothing. This commit did not touch it, and neither does anything else on
+this branch. A GNOME Shell search result for any game here still shows no
+thumbnail, where upstream's does. **Verdict: gap, unchanged.**
+
+**Translation (text axis) — still open, unchanged.** Every widget in every
+file above still builds its labels as bare Ruby string literals; see
+`translation-parity.md`.
+
 ## Rules check
 
 - No parity claim in this report rests on the scan or on reading code alone
-  for the parts that could be driven: the 147-check driver run backs every
-  "does have parity" claim above (see `test-parity.md` for the actual
-  transcript).
-- Both remaining gaps (style.css dead, search provider unreachable without
-  registration files) are named with file and line, not "probably missing
-  somewhere," and Gap 1's close and Heroic's narrower carve-out are each
-  stated plainly rather than left reading as fully closed.
-- Neither remaining gap is excused by any comment in the source — see
+  for the parts that could be driven: the 151+16=167-check driver run (both
+  scripts re-run live this round) backs every "does have parity" claim
+  above (see `test-parity.md` for the transcript).
+- The one remaining gap (cover art dropped from search results) is named
+  with file and line, not "probably missing somewhere," and every gap this
+  round's commit actually closed is stated as closed rather than left
+  reading as still open, and vice versa.
+- The remaining gap is not excused by any comment in the source — see
   `accountability-ensurance.md`.

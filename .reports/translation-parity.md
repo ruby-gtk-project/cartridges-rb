@@ -13,6 +13,7 @@ The 148/148 gap count from the previous round is unchanged.
 | | |
 |---|---|
 | Upstream | `origin/main` @ `c4454fd` |
+| Port | `ruby` @ `2cb65fe` |
 | Upstream msgids | 148 (`po/cartridges.pot`, 149 `^msgid` lines minus the empty header entry) |
 | Upstream languages | 38 (`po/LINGUAS`: ar, be, ca, cs, de, el, en_GB, es, eu, fa, fi, fr, hi, hr, hu, ia, ie, it, ja, ka, kk, ko, kw, nb_NO, nl, nn, pl, pt, pt_BR, ro, ru, sv, ta, te, tr, uk, vi, zh_Hans) |
 | Port msgids | **0** |
@@ -93,3 +94,16 @@ does not hold at all. Every string in every window, dialog, menu and error
 path would need to be re-authored behind a translation marker with
 upstream's exact bytes, and upstream's full `po/` tree (38 languages) would
 need to ship with the port, before this ledger has a single `ported` row.
+
+## Round 5 update, re-audited at `2cb65fe`
+
+`Wire style.css, search-provider data files, and Heroic/shell-provider test
+coverage` landed since the last pass. Re-ran every check above live: no
+`po/`, no `.pot`, no gettext call, still 0 port msgids. The two new data
+files this commit ships
+(`data/page.kramo.Cartridges.SearchProvider.ini`,
+`data/page.kramo.Cartridges.SearchProvider.service.in`) were read directly
+— both are plain key=value config (`DesktopId=`, `BusName=`, `Exec=`), with
+no user-facing string and no counterpart in upstream's `.pot` either, so
+they open zero new rows on either side. The 148/148 gap count, and every
+finding above, is unchanged.
