@@ -70,6 +70,44 @@ end
 desc "Generate YARD documentation"
 task docs: "yard"
 
+### SEARCH PROVIDER DATA FILES
+#
+# This gem has no meson/autotools build, so the @APP_ID@/@PREFIX@/
+# @libexecdir@ substitutions upstream's meson.build applies at build time
+# (search-provider/meson.build) happen here instead, at install time. The
+# two files below make the GNOME Shell search provider (lib/cartridges/
+# shell_search_provider.rb, exe/cartridges-search-provider) actually
+# discoverable: without them GNOME Shell has no .ini registering the
+# provider and D-Bus has no .service activating its bus name.
+namespace :install do
+  desc "Install the GNOME Shell search provider's .ini and D-Bus .service files"
+  task :search_provider do
+    require_relative "lib/cartridges/shared"
+
+    datadir = ENV.fetch("DATADIR", File.join(ENV.fetch("XDG_DATA_HOME", File.join(Dir.home, ".local", "share"))))
+    libexecdir = ENV.fetch("LIBEXECDIR", Gem.bindir)
+    app_id = Cartridges::Shared::APP_ID
+    prefix = Cartridges::Shared::PREFIX
+
+    substitute = lambda do |contents|
+      contents.gsub("@APP_ID@", app_id).gsub("@PREFIX@", prefix).gsub("@libexecdir@", libexecdir)
+    end
+
+    search_provider_dir = File.join(datadir, "gnome-shell", "search-providers")
+    service_dir = File.join(datadir, "dbus-1", "services")
+    FileUtils.mkdir_p(search_provider_dir)
+    FileUtils.mkdir_p(service_dir)
+
+    ini_dest = File.join(search_provider_dir, "#{app_id}.SearchProvider.ini")
+    File.write(ini_dest, substitute.call(File.read(File.join(__dir__, "data", "page.kramo.Cartridges.SearchProvider.ini"))))
+    puts "Installed #{ini_dest}"
+
+    service_dest = File.join(service_dir, "#{app_id}.SearchProvider.service")
+    File.write(service_dest, substitute.call(File.read(File.join(__dir__, "data", "page.kramo.Cartridges.SearchProvider.service.in"))))
+    puts "Installed #{service_dest}"
+  end
+end
+
 # simplecov:disable
 ### MONOREPO FAMILY TASKS
 if Dir.exist?(File.join(__dir__, "gems"))

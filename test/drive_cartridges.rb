@@ -20,6 +20,7 @@
 # shell's own banner).
 
 require "fileutils"
+require "json"
 require "tmpdir"
 
 # Scratch XDG dirs, so a run never reads or writes the real user's games,
@@ -59,6 +60,43 @@ SQLite3::Database.new(ITCH_DB) do |db|
   db.execute("INSERT INTO games (id, title, cover_url, still_cover_url) VALUES (1, 'Drive Itch Game', NULL, NULL)")
   db.execute("INSERT INTO caves (id, game_id) VALUES (1, 1)")
 end
+
+# Real fixture files for the Heroic source's four sub-sources (sideload,
+# Legendary/Epic, GOG, Nile/Amazon), so the import step below exercises each
+# HeroicSourceIterable sub-source's actual library/installed-list parsing
+# instead of only hitting "no valid candidate" and skipping. See
+# lib/cartridges/importer/heroic_source.rb for the paths each sub-source
+# reads relative to the "heroic-location" config root.
+HEROIC_ROOT = File.join(ENV.fetch("XDG_CONFIG_HOME"), "heroic")
+FileUtils.mkdir_p(File.join(HEROIC_ROOT, "store"))
+FileUtils.mkdir_p(File.join(HEROIC_ROOT, "store_cache"))
+FileUtils.mkdir_p(File.join(HEROIC_ROOT, "legendaryConfig"))
+FileUtils.mkdir_p(File.join(HEROIC_ROOT, "legendary"))
+FileUtils.mkdir_p(File.join(HEROIC_ROOT, "gog_store"))
+FileUtils.mkdir_p(File.join(HEROIC_ROOT, "nile_config", "nile"))
+FileUtils.mkdir_p(File.join(HEROIC_ROOT, "sideload_apps"))
+
+File.write(File.join(HEROIC_ROOT, "config.json"), "{}")
+File.write(File.join(HEROIC_ROOT, "store", "config.json"), JSON.generate({"games" => {"hidden" => []}}))
+
+File.write(File.join(HEROIC_ROOT, "store_cache", "legendary_library.json"), JSON.generate({
+  "library" => [{"app_name" => "epic1", "runner" => "legendary", "title" => "Drive Epic Game", "developer" => "Epic Dev", "art_square" => "https://example.com/epic.jpg"}],
+}))
+File.write(File.join(HEROIC_ROOT, "legendary", "installed.json"), JSON.generate({"epic1" => {}}))
+
+File.write(File.join(HEROIC_ROOT, "store_cache", "gog_library.json"), JSON.generate({
+  "games" => [{"app_name" => "gog1", "runner" => "gogdl", "title" => "Drive GOG Game", "developer" => "GOG Dev", "art_square" => "https://example.com/gog.jpg"}],
+}))
+File.write(File.join(HEROIC_ROOT, "gog_store", "installed.json"), JSON.generate({"installed" => [{"appName" => "gog1"}]}))
+
+File.write(File.join(HEROIC_ROOT, "store_cache", "nile_library.json"), JSON.generate({
+  "library" => [{"app_name" => "nile1", "runner" => "nile", "title" => "Drive Amazon Game", "developer" => "Amazon Dev", "art_square" => "https://example.com/nile.jpg"}],
+}))
+File.write(File.join(HEROIC_ROOT, "nile_config", "nile", "installed.json"), JSON.generate([{"id" => "nile1"}]))
+
+File.write(File.join(HEROIC_ROOT, "sideload_apps", "library.json"), JSON.generate({
+  "games" => [{"app_name" => "side1", "runner" => "sideload", "title" => "Drive Sideload Game", "developer" => "", "art_square" => "https://example.com/side.jpg"}],
+}))
 
 $LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
 
@@ -577,8 +615,8 @@ GtkDriver.drive(Cartridges::Application.new, shots: SHOTS, timeout: 60) do |d, a
     pump(2000)
     d.check("the import dialog closed") { !app.main_window.window.visible_dialog.is_a?(Adwaita::Dialog) || app.main_window.window.visible_dialog.nil? }
     d.check("the import action is enabled again") { app.app.lookup_action("import").enabled? }
-    d.check("two games came in: one from the Lutris fixture, one from the itch fixture") do
-      Shared.importer.n_games_added == 2
+    d.check("six games came in: one each from the Lutris and itch fixtures, and one from each of the four Heroic sub-sources") do
+      Shared.importer.n_games_added == 6
     end
     d.check("the Lutris fixture game landed in the store with the right name and source") do
       game = Shared.store.find { |g| g.name == "Drive Lutris Game" }
@@ -593,6 +631,17 @@ GtkDriver.drive(Cartridges::Application.new, shots: SHOTS, timeout: 60) do |d, a
     end
     d.check("the itch game's id round-trips itch's own game_id format") do
       Shared.store.find { |g| g.name == "Drive Itch Game" }.game_id == "itch_1"
+    end
+    {
+      "Drive Epic Game" => ["heroic_epic", "heroic_epic_epic1"],
+      "Drive GOG Game" => ["heroic_gog", "heroic_gog_gog1"],
+      "Drive Amazon Game" => ["heroic_amazon", "heroic_amazon_nile1"],
+      "Drive Sideload Game" => ["heroic_sideload", "heroic_sideload_side1"],
+    }.each do |name, (source, game_id)|
+      d.check("the Heroic fixture game #{name.inspect} landed in the store with the right source and id") do
+        game = Shared.store.find { |g| g.name == name }
+        !game.nil? && game.source == source && game.game_id == game_id
+      end
     end
     d.shot("16-after-import")
   end

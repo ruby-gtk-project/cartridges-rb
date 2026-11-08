@@ -90,6 +90,8 @@ module Cartridges
       def activate
         return if Shared.win
 
+        load_css
+
         Shared.win = main_window
         main_window.build
 
@@ -104,6 +106,22 @@ module Cartridges
         main_window.window.present
 
         schedule_auto_import if Shared.schema.get_boolean("auto-import")
+      end
+
+      # Loads lib/cartridges/style.css as an application-priority provider,
+      # the purple accent overrides and #details_view rules upstream ships
+      # as data/gtk/style.css + style-dark.css (one stylesheet here, since
+      # GTK 4 honours the `prefers-color-scheme` media query directly).
+      # 600 is GTK_STYLE_PROVIDER_PRIORITY_APPLICATION; the Ruby bindings
+      # don't expose it as a constant, so it's passed as the raw integer.
+      CSS_PROVIDER_PRIORITY_APPLICATION = 600
+
+      def load_css
+        Gtk::StyleContext.add_provider_for_display(Gdk::Display.default, css_provider, CSS_PROVIDER_PRIORITY_APPLICATION)
+      end
+
+      def css_provider
+        @css_provider ||= Gtk::CssProvider.new.tap { |provider| provider.load_from_path(File.join(__dir__, "style.css")) }
       end
 
       def bind_window_geometry
