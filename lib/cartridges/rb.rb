@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require_relative "rb/version"
-
 # The part of Cartridges that loads without a display.
 #
 # This file exists because `require "gtk4"` initialises GTK at require time
@@ -32,3 +30,4 @@ require_relative "importer/retroarch_source"
 require_relative "importer/heroic_source"
 require_relative "importer/lutris_source"
 require_relative "importer/itch_source"
+require_relative "rb/version"

@@ -161,16 +161,6 @@
     };
     version = "0.4.3";
   };
-  mini_portile2 = {
-    groups = ["default"];
-    platforms = [];
-    source = {
-      remotes = ["https://rubygems.org"];
-      sha256 = "12f2830x7pq3kj0v8nz0zjvaw02sv01bqs1zwdrc04704kwcgmqc";
-      type = "gem";
-    };
-    version = "2.8.9";
-  };
   native-package-installer = {
     groups = ["default"];
     platforms = [];
@@ -222,15 +212,5 @@
       type = "gem";
     };
     version = "0.5.0";
-  };
-  sqlite3 = {
-    groups = ["default"];
-    platforms = [];
-    source = {
-      remotes = ["https://rubygems.org"];
-      sha256 = "0r39asq48zjcvmh4lgac75zlxvyh9fgar25076gs9y476b6nispi";
-      type = "gem";
-    };
-    version = "2.10.2";
   };
 }
